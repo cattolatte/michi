@@ -27,5 +27,6 @@ nav:
       - sweep: sweep.md
       - ui: ui.md
   - Console: console.md
+  - Plugins: plugins.md
   - Philosophy: philosophy.md
   - Roadmap: roadmap.md

@@ -189,21 +189,23 @@ No server, no account, no telemetry, no network call. Ever.
 
 The full reasoning, and the list of things michi will deliberately never do,
 lives in [the philosophy](docs/philosophy.md); what ships when is in
-[the roadmap](docs/roadmap.md).
+[the roadmap](docs/roadmap.md). Extending michi with your own models or model
+loaders is covered in [the plugin guide](docs/plugins.md).
 
 <br>
 
 ## 開発 — development
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --extra ui
 uv run ruff check . && uv run ruff format --check .
 uv run mypy src/michi
 uv run pytest
 ```
 
 All four gates run in CI on Linux, macOS, and Windows, against Python 3.11
-and 3.13.
+and 3.13. [CONTRIBUTING.md](CONTRIBUTING.md) covers what is most welcome, and
+what michi says no to.
 
 <br>
 

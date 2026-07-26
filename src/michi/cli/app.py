@@ -89,6 +89,41 @@ def main(
 
 
 @app.command()
+def plugins() -> None:
+    """List installed michi plugins, working or not."""
+    from rich import box
+    from rich.table import Table
+
+    from michi.plugins import installed_plugins
+
+    records = installed_plugins()
+    if not records:
+        _console.print(
+            "\n  [dim]no plugins installed[/]\n\n"
+            "  michi discovers entry points in two groups:\n"
+            "    [cyan]michi.models[/]    add algorithms to the bench catalogue\n"
+            "    [cyan]michi.adapters[/]  add ways to load a model for eval\n"
+        )
+        return
+
+    table = Table(
+        box=box.SIMPLE_HEAD, header_style="bold dim", pad_edge=False, show_edge=False
+    )
+    table.add_column("group", no_wrap=True)
+    table.add_column("name", no_wrap=True)
+    table.add_column("from", no_wrap=True)
+    table.add_column("status", overflow="fold")
+    for record in records:
+        status = (
+            "[green]loaded[/]" if record.loaded else f"[red]failed[/] {record.error}"
+        )
+        table.add_row(record.group, record.name, record.distribution, status)
+    _console.print()
+    _console.print(table)
+    _console.print()
+
+
+@app.command()
 def info() -> None:
     """Show version and environment information."""
     from michi.core.config import find_config, load_defaults

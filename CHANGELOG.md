@@ -6,6 +6,35 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-27
+
+The plugin surface.
+
+### Added
+- **Two extension points**, discovered via entry points:
+  `michi.models` adds algorithms to the `bench` catalogue, and
+  `michi.adapters` adds ways to load a model for `eval` — which is where an
+  ONNX or framework loader belongs, since michi deliberately ships none.
+- **`michi plugins`** lists what is installed, working or not.
+- **A published compatibility suite** (`michi.plugins.check_model_entry`,
+  `check_adapter`) that plugin authors run in their own CI. michi's maintainer
+  is not the integration point for every plugin — that is the only way an
+  ecosystem stays affordable for one person to support.
+- `CONTRIBUTING.md` and a plugin guide.
+
+### Notes
+- These points were opened at v0.8, not before, because the interfaces behind
+  them had by then survived six milestones and a dozen concrete
+  implementations without changing shape. An interface with one implementation
+  is a guess, and a published interface is a promise.
+- **A broken plugin is skipped, never fatal**: an entry point that fails to
+  import is reported by `michi plugins` and ignored, and benchmarks keep
+  running.
+- **Built-ins win ties.** A plugin cannot shadow `rf` or any documented name,
+  so `--list-models` always means what the documentation says.
+- Recipe operations, report sections, and metric definitions remain closed.
+  They stay closed until something real needs them.
+
 ## [0.7.0] — 2026-07-27
 
 A local viewer: `michi ui`.

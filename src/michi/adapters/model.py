@@ -128,7 +128,10 @@ def load_model(reference: str) -> LoadedModel:
     Both paths execute code from the referenced artifact — unpickling and
     importing are equivalent to running it. Only load models you trust.
     """
-    if ":" in reference and not _looks_like_windows_path(reference):
+    plugged = _load_from_plugin(reference)
+    if plugged is not None:
+        model = plugged
+    elif ":" in reference and not _looks_like_windows_path(reference):
         model = _load_from_protocol(reference)
     else:
         model = _load_from_file(Path(reference))
@@ -141,6 +144,33 @@ def load_model(reference: str) -> LoadedModel:
         )
         raise ModelError(msg)
     return model
+
+
+def _load_from_plugin(reference: str) -> LoadedModel | None:
+    """Offer the reference to installed adapters, if any claim it.
+
+    Plugins are consulted before the built-in paths so that an ONNX or
+    framework adapter can take a reference michi would otherwise refuse — but
+    a plugin that fails is skipped, never fatal.
+    """
+    from michi.plugins.registry import ADAPTER_GROUP, discover
+
+    for _, loaded, record in discover(ADAPTER_GROUP):
+        if not record.loaded or loaded is None:
+            continue
+        adapter = loaded() if isinstance(loaded, type) else loaded
+        try:
+            if not adapter.handles(reference):
+                continue
+            model = adapter.load(reference)
+        except AttributeError:
+            continue
+        except Exception as err:  # third-party failure boundary
+            msg = f"the {record.distribution!r} adapter failed on {reference!r}: {err}"
+            raise ModelError(msg) from err
+        if model is not None:
+            return model  # type: ignore[no-any-return]
+    return None
 
 
 def _load_from_file(path: Path) -> LoadedModel:

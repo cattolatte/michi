@@ -336,8 +336,37 @@ _REGISTRY: Final[tuple[ModelEntry, ...]] = (
 )
 
 
+def _plugin_models() -> tuple[ModelEntry, ...]:
+    """Models contributed by installed plugins.
+
+    A plugin may not shadow a built-in: a user reading ``--list-models`` has
+    to be able to trust that ``rf`` means what the documentation says.
+    """
+    from michi.plugins.registry import MODEL_GROUP, discover
+
+    builtin = {entry.name for entry in _REGISTRY}
+    extra: list[ModelEntry] = []
+    for _, loaded, record in discover(MODEL_GROUP):
+        if not record.loaded or loaded is None:
+            continue
+        candidates = loaded() if callable(loaded) else loaded
+        if isinstance(candidates, ModelEntry):
+            candidates = (candidates,)
+        try:
+            for entry in candidates:
+                if isinstance(entry, ModelEntry) and entry.name not in builtin:
+                    extra.append(entry)
+                    builtin.add(entry.name)
+        except TypeError:
+            continue
+    return tuple(extra)
+
+
 def available_models(task: str | None = None) -> tuple[ModelEntry, ...]:
     """List the catalogue, optionally narrowed to one task.
+
+    Includes models contributed by installed plugins, which are appended
+    after the built-ins and can never shadow one.
 
     Examples
     --------
@@ -345,9 +374,10 @@ def available_models(task: str | None = None) -> tuple[ModelEntry, ...]:
     >>> "lasso" in names and "naive-bayes" not in names
     True
     """
+    entries = _REGISTRY + _plugin_models()
     if task is None:
-        return _REGISTRY
-    return tuple(entry for entry in _REGISTRY if entry.supports(task))
+        return entries
+    return tuple(entry for entry in entries if entry.supports(task))
 
 
 def model_entry(name: str) -> ModelEntry:
@@ -358,10 +388,10 @@ def model_entry(name: str) -> ModelEntry:
     RunError
         If no such model exists, listing what does.
     """
-    for entry in _REGISTRY:
+    for entry in available_models():
         if entry.name == name:
             return entry
-    known = ", ".join(item.name for item in _REGISTRY)
+    known = ", ".join(item.name for item in available_models())
     msg = f"unknown model {name!r}. Available models: {known}"
     raise RunError(msg)
 
