@@ -63,7 +63,7 @@ dev = [
 michi = "michi.cli.app:app"
 
 [project.urls]
-Repository = "https://github.com/coderstale/michi"
+Repository = "https://github.com/cattolatte/michi"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/michi"]

@@ -8,5 +8,5 @@ judgement call to you.
 
 The documentation site grows with the milestones (Diátaxis structure:
 quickstart, how-to guides, reference, explanations). Until then, see
-[PLAN.md](https://github.com/coderstale/michi/blob/main/PLAN.md) for the full
+[PLAN.md](https://github.com/cattolatte/michi/blob/main/PLAN.md) for the full
 vision, architecture, and roadmap.

@@ -1,59 +1,105 @@
-# Michi (道)
+<div align="center">
 
-> A local-first ML workbench: independent command-line tools that automate the
-> repetitive implementation work of machine learning — inspecting data,
-> cleaning it, evaluating models, benchmarking, running experiment grids, and
-> reporting — while leaving every judgement call to you.
+# 道 michi
+
+**A local-first ML workbench — automate the implementation, never the judgement.**
+
+[![ci](https://github.com/cattolatte/michi/actions/workflows/ci.yml/badge.svg)](https://github.com/cattolatte/michi/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/cattolatte/michi?display_name=tag&sort=semver)](https://github.com/cattolatte/michi/releases)
+[![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2)](https://mypy-lang.org/)
+[![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+</div>
+
+---
+
+Michi is a toolbox of independent command-line tools that automate the
+repetitive implementation work of machine learning — profiling datasets,
+cleaning them, evaluating models, benchmarking, running experiment grids, and
+reporting — while leaving every judgement call to you.
+
+It works on the projects you already have: your CSV, your `model.pkl`, your
+repo. There is no project template to adopt, no framework to import, no
+account to create, and nothing leaves your machine.
+
+> ### On the name
 >
-> **Automate implementation. Never automate judgement.**
+> **道** (*michi*) means "path" or "road". Read as **-dō**, the same character
+> ends the names of Japanese disciplines — 柔道 (*jūdō*, the gentle way),
+> 書道 (*shodō*, the way of writing), 茶道 (*chadō*, the way of tea) — where it
+> means not merely a road but *a practice one walks for oneself*.
+>
+> That is the whole design brief. Michi clears the path; you walk it.
 
-Michi (道, "the path") makes the ML journey easier without ever walking it for
-you. It is a **toolbox, not a workflow**: every verb works standalone, on
-artifacts you already have — your CSV, your `model.pkl`, your existing repo.
-No project template, no accounts, no cloud, no telemetry. Everything is local,
-reproducible, and explained.
+## Install
 
-## Status
+```bash
+pip install michi
+```
 
-**Pre-alpha.** The project is in its skeleton phase; `v0.1` (`michi inspect`)
-is the first milestone. See [PLAN.md](PLAN.md) — the master planning document —
-for the full vision, architecture, and roadmap.
+Optional extras: `michi[bench]` (XGBoost, LightGBM, CatBoost), `michi[excel]`,
+`michi[shap]`, `michi[ui]`.
 
-## The toolbox (planned)
+## The toolbox
 
-| Verb | What it does | Milestone |
+| Verb | What it does | Status |
 |---|---|---|
-| `michi inspect data.csv` | Profile a dataset: types, missing values, skew, imbalance, correlations, outliers — every finding explained | v0.1 |
-| `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics, calibration, baselines, leakage checks | v0.2 |
-| `michi bench … --models rf,logreg,xgb` | Train and compare models with honest CV, confidence intervals, and significance tests | v0.3 |
-| `michi clean` / `apply` / `export` | Interactive cleaning that authors a reproducible recipe, applies it non-destructively, and exports readable pipeline code | v0.4 |
-| `michi` (console) | Interactive shell with context-aware tab completion; every session exports to a replayable script | v0.5 |
-| `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds | v0.6 |
-| `michi report runs/` | HTML / Markdown / LaTeX reports over recorded runs | v0.3+ |
-| `michi ui` | Local read-only viewer over your runs | v0.7 |
+| `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers — every finding explained | ✅ v0.1 |
+| `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics, calibration, baselines, leakage checks | 🔜 v0.2 |
+| `michi bench … --models rf,logreg,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | 🔜 v0.3 |
+| `michi clean` / `apply` / `export` | Interactive cleaning that authors a reproducible recipe and exports readable pipeline code | 🔜 v0.4 |
+| `michi` (console) | Interactive shell with context-aware tab completion; every session exports to a replayable script | 🔜 v0.5 |
+| `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds | 🔜 v0.6 |
+| `michi report runs/` | HTML / Markdown / LaTeX reports over recorded runs | 🔜 v0.3 |
+| `michi ui` | Local read-only viewer over your runs | 🔜 v0.7 |
+
+## Quick look
+
+```bash
+michi inspect data/titanic.csv --target survived
+```
+
+```
+ 道  michi inspect — titanic.csv
+
+  891 rows × 12 columns · 3.2% missing overall
+
+  Findings (7)
+  ● high    cabin              77.1% missing
+  ● warn    age                19.9% missing
+  ● warn    survived           class imbalance 61.6% / 38.4%
+  ● info    fare               skew 4.79 (right-tailed)
+  …
+
+  Run with --explain for what each finding means and your options.
+```
+
+Add `--html profile.html` for a self-contained offline report, or `--json
+profile.json` for a machine-readable profile you can diff in CI.
 
 ## Philosophy
 
 - **Toolbox, not workflow** — use one verb, ignore the rest, keep your project structure.
-- **Artifacts over sessions** — every interactive decision becomes a durable, versionable file (recipe, manifest, report).
+- **Menus, not recommendations** — michi lists the options; you pick. Defaults exist for mechanics (folds, seeds), never for judgement.
+- **Artifacts over sessions** — every decision becomes a durable, versionable file.
 - **Rigor by default** — baselines, confidence intervals, significance tests, leakage checks: opt-out, not opt-in.
-- **Local-first, offline, private** — no server, no accounts, no telemetry, ever.
-- **Transparent and educational** — findings come with explanations; generated code is readable and yours.
+- **Local-first** — no server, no accounts, no telemetry, no network calls. Ever.
+
+Read [PLAN.md](PLAN.md) for the full architecture, roadmap, and the list of
+things michi will deliberately never do.
 
 ## Development
 
-The project uses [uv](https://docs.astral.sh/uv/).
-
 ```bash
-uv sync --extra dev      # install with dev tooling
-uv run ruff check .      # lint
-uv run ruff format --check .
-uv run mypy src/michi    # strict type checking
-uv run pytest            # tests (fully offline)
+uv sync --extra dev
+uv run ruff check . && uv run ruff format --check .
+uv run mypy src/michi
+uv run pytest
 ```
 
-All four gates must pass before a change is considered done; CI enforces them
-on Linux, macOS, and Windows.
+All four gates run in CI on Linux, macOS, and Windows.
 
 ## License
 

@@ -1,6 +1,6 @@
 site_name: Michi (道)
 site_description: A local-first ML workbench — automate implementation, never judgement.
-repo_url: https://github.com/coderstale/michi
+repo_url: https://github.com/cattolatte/michi
 
 theme:
   name: material
