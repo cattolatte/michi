@@ -67,7 +67,7 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi` | Interactive console with context-aware completion; every session exports to a replayable script | **v0.5** |
 | `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds, with resume | **v0.6** |
 | `michi report runs/` | HTML · Markdown · LaTeX reports over recorded runs | **v0.3** |
-| `michi ui` | Local, read-only viewer over your runs | v0.7 |
+| `michi ui` | Local, read-only viewer over your runs | **v0.7** |
 
 <br>
 
@@ -164,7 +164,7 @@ every session exports back to plain one-shot invocations.
 Full options: [`michi inspect`](docs/inspect.md) · [`michi eval`](docs/eval.md) ·
 [`michi bench`](docs/bench.md) · [`michi report`](docs/report.md) ·
 [`michi clean`](docs/clean.md) · [`michi sweep`](docs/sweep.md) ·
-[the console](docs/console.md).
+[`michi ui`](docs/ui.md) · [the console](docs/console.md).
 
 <br>
 

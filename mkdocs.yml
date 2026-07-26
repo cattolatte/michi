@@ -25,6 +25,7 @@ nav:
       - report: report.md
       - clean · apply · export: clean.md
       - sweep: sweep.md
+      - ui: ui.md
   - Console: console.md
   - Philosophy: philosophy.md
   - Roadmap: roadmap.md

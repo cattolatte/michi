@@ -6,6 +6,28 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-07-27
+
+A local viewer: `michi ui`.
+
+### Added
+- **`michi ui`** (needs `michi[ui]`) — a read-only web view over the runs
+  directory: every run grouped by dataset and target, and a detail page per
+  run with metrics beside their baselines, checks, slices, and full
+  provenance.
+- Serves on **localhost only**, with no flag to change that.
+
+### Notes
+- The viewer is **read-only by construction**: a test asserts the application
+  exposes only `GET`. A UI that can act is a platform, and michi is not one.
+- **No database, no build step, no network.** Every request reads the
+  directory, so a run appears on refresh; pages are server-rendered HTML with
+  inline CSS, so the viewer works air-gapped and cannot rot when a frontend
+  toolchain moves on.
+- **It is deletable.** Removing it would remove convenience and not one
+  capability — everything it shows is a file, and `michi report` renders the
+  same artifacts. That is the bar it has to keep clearing.
+
 ## [0.6.0] — 2026-07-27
 
 Experiment grids: `michi sweep`.

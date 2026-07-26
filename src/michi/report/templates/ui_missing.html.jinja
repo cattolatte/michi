@@ -1,0 +1,9 @@
+{% extends "_ui_base.html.jinja" %}
+{% block title %}michi — not found{% endblock %}
+{% block subtitle %}<a class="back" href="/">← all runs</a>{% endblock %}
+{% block content %}
+<div class="card"><table><tbody><tr><td class="muted">
+  No run <span class="mono">{{ run_id }}</span> in <span class="mono">{{ runs_dir }}</span>.
+  It may have been deleted, or written to a different runs directory.
+</td></tr></tbody></table></div>
+{% endblock %}

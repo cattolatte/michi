@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}michi{% endblock %}</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --panel: #ffffff; --ink: #1c1b1a; --muted: #6b6764;
+    --line: #e6e2dc; --accent: #b23a30; --high: #c0392b; --warn: #b8860b;
+    --info: #7a7570; --good: #2e7d32;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a; --panel: #1e1d22; --ink: #ece9e4; --muted: #a09a94;
+      --line: #302e35; --accent: #e2645a; --high: #e2645a; --warn: #d4a548;
+      --info: #8b8580; --good: #6aab6e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2.5rem 1.5rem 5rem; background: var(--bg); color: var(--ink);
+         font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  a { color: inherit; }
+  header { border-bottom: 2px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  .brand { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em;
+           text-decoration: none; }
+  .brand .kanji { color: var(--accent); margin-right: .4rem; }
+  .sub { color: var(--muted); margin-top: .25rem; font-size: .9rem; }
+  h2 { font-size: 1rem; margin: 2.2rem 0 .3rem; font-weight: 650; }
+  .meta { color: var(--muted); font-size: .84rem; margin-bottom: 1rem; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em;
+       color: var(--muted); padding: .75rem 1rem; border-bottom: 1px solid var(--line);
+       font-weight: 600; }
+  td { padding: .65rem 1rem; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .87rem; }
+  .muted { color: var(--muted); }
+  .leader { font-weight: 700; color: var(--good); }
+  .tied { color: var(--warn); }
+  .sev { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+         letter-spacing: .06em; padding: .12rem .45rem; border-radius: 4px; color: #fff; }
+  .sev-high { background: var(--high); } .sev-warn { background: var(--warn); }
+  .sev-info { background: var(--info); }
+  .note { color: var(--muted); font-size: .85rem; margin-top: 2rem;
+          border-left: 3px solid var(--line); padding-left: 1rem; }
+  .back { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="/"><span class="kanji">道</span>michi</a>
+  <div class="sub">{% block subtitle %}{% endblock %}</div>
+</header>
+{% block content %}{% endblock %}
+<footer>
+  read-only viewer over files on disk · nothing here is stored anywhere else ·
+  <span class="mono">michi report</span> renders the same artifacts
+</footer>
+</div>
+</body>
+</html>

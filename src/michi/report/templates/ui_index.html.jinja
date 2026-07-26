@@ -1,0 +1,41 @@
+{% extends "_ui_base.html.jinja" %}
+{% block title %}michi — runs{% endblock %}
+{% block subtitle %}{{ total }} recorded run{{ "" if total == 1 else "s" }} in <span class="mono">{{ runs_dir }}</span>{% endblock %}
+{% block content %}
+{% if not groups %}
+  <div class="card"><table><tbody><tr><td class="muted">
+    Nothing recorded yet. <span class="mono">michi eval</span> and
+    <span class="mono">michi bench</span> write manifests here.
+  </td></tr></tbody></table></div>
+{% endif %}
+{% for group in groups %}
+<h2><span class="mono">{{ group.dataset }}</span> — target <span class="mono">{{ group.target }}</span></h2>
+<div class="meta">
+  {{ group.task }} · {{ group.manifests|length }} runs · ranked by {{ group.primary_metric }} ·
+  data <span class="mono">{{ group.dataset_sha[:16] }}</span>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>model</th><th>kind</th><th class="num">{{ group.primary_metric }}</th>
+      <th class="num">95% interval</th><th>checks</th><th>when</th></tr></thead>
+    <tbody>
+    {% for manifest in group.ranked() %}
+      <tr onclick="location='/run/{{ manifest.run_id }}'" style="cursor:pointer">
+        <td class="mono"><a href="/run/{{ manifest.run_id }}" style="text-decoration:none">{{ manifest.model.class_name }}</a></td>
+        <td class="muted">{{ manifest.kind }}</td>
+        <td class="num">{% if manifest.metrics %}{{ "%.4g"|format(manifest.primary.value) }}{% else %}—{% endif %}</td>
+        <td class="num muted">{% if manifest.metrics and manifest.primary.has_interval %}{{ "%.4g"|format(manifest.primary.ci_low) }}–{{ "%.4g"|format(manifest.primary.ci_high) }}{% else %}—{% endif %}</td>
+        <td>{% for check in manifest.checks[:3] %}<span class="sev sev-{{ check.severity.value }}">{{ check.severity.value }}</span> {% endfor %}</td>
+        <td class="muted mono">{{ manifest.created_at }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+<div class="note">
+  Runs are grouped by dataset content hash and target, because only runs over
+  the same rows predicting the same thing can be compared. This page reads the
+  directory on every request — refresh after a run and it is simply there.
+</div>
+{% endblock %}

@@ -22,7 +22,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra ui
 
       - name: Lint
         run: uv run ruff check .

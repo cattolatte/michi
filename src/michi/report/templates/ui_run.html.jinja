@@ -1,0 +1,74 @@
+{% extends "_ui_base.html.jinja" %}
+{% block title %}michi — {{ manifest.model.class_name }}{% endblock %}
+{% block subtitle %}<a class="back" href="/">← all runs</a>{% endblock %}
+{% block content %}
+<h2>{{ manifest.model.class_name }} <span class="muted">· {{ manifest.kind }}</span></h2>
+<div class="meta">
+  {{ manifest.task }} · {{ "{:,}".format(manifest.n_rows) }} rows · target
+  <span class="mono">{{ manifest.target }}</span> · seed {{ manifest.seed }} ·
+  {{ "%.2f"|format(manifest.duration_s) }}s
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>metric</th><th class="num">value</th><th class="num">95% interval</th>
+      {% for name in manifest.baselines %}<th class="num">vs {{ name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for metric in manifest.metrics %}
+      <tr>
+        <td class="mono">{{ metric.name }}</td>
+        <td class="num">{{ "%.4g"|format(metric.value) }}</td>
+        <td class="num muted">{% if metric.has_interval %}{{ "%.4g"|format(metric.ci_low) }}–{{ "%.4g"|format(metric.ci_high) }}{% else %}—{% endif %}</td>
+        {% for name, items in manifest.baselines.items() %}
+          <td class="num muted">{% for item in items %}{% if item.name == metric.name %}{{ "%.4g"|format(item.value) }}{% endif %}{% endfor %}</td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if manifest.checks %}
+<h2>Checks</h2>
+<div class="card"><table><tbody>
+{% for check in manifest.checks %}
+  <tr><td style="width:1%"><span class="sev sev-{{ check.severity.value }}">{{ check.severity.value }}</span></td>
+      <td>{{ check.summary }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+
+{% if manifest.details.get("slices") %}
+<h2>Slices</h2>
+<div class="card"><table>
+  <thead><tr><th>column</th><th>value</th><th class="num">rows</th><th class="num">score</th></tr></thead>
+  <tbody>
+  {% for item in manifest.details["slices"]|sort(attribute="score") %}
+    <tr><td class="mono">{{ item.column }}</td><td>{{ item.value }}</td>
+        <td class="num muted">{{ "{:,}".format(item.n_rows) }}</td>
+        <td class="num">{{ "%.4g"|format(item.score) }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+<h2>Provenance</h2>
+<div class="card"><table><tbody>
+  <tr><td class="muted" style="width:30%">run id</td><td class="mono">{{ manifest.run_id }}</td></tr>
+  <tr><td class="muted">data</td><td class="mono">{{ manifest.dataset.path }}<br><span class="muted">{{ manifest.dataset.sha256[:32] }}</span></td></tr>
+  <tr><td class="muted">model</td><td class="mono">{{ manifest.model.reference }} <span class="muted">({{ manifest.model.loader }})</span></td></tr>
+  <tr><td class="muted">python</td><td class="mono">{{ manifest.environment.python }}</td></tr>
+  <tr><td class="muted">platform</td><td class="mono">{{ manifest.environment.platform }}</td></tr>
+  {% for name, version in manifest.environment.packages.items() %}
+  <tr><td class="muted">{{ name }}</td><td class="mono">{{ version }}</td></tr>
+  {% endfor %}
+  {% if manifest.environment.git_commit %}
+  <tr><td class="muted">git</td><td class="mono">{{ manifest.environment.git_commit[:12] }}</td></tr>
+  {% endif %}
+</tbody></table></div>
+
+<div class="note">
+  Everything on this page comes from one JSON file. It can be read, diffed, and
+  re-executed without michi installed.
+</div>
+{% endblock %}
