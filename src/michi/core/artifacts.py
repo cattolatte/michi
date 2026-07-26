@@ -23,7 +23,7 @@ from __future__ import annotations
 import datetime as _dt
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Self
 
 from michi import __version__
@@ -52,12 +52,15 @@ def utc_now_iso() -> str:
     >>> stamp.endswith("Z")
     True
     """
-    return _dt.datetime.now(tz=_dt.UTC).replace(microsecond=0).isoformat().replace(
-        "+00:00", "Z"
+    return (
+        _dt.datetime.now(tz=_dt.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
     )
 
 
-class ColumnKind(str, Enum):
+class ColumnKind(StrEnum):
     """michi's own column taxonomy, independent of any dataframe library.
 
     The kind drives which statistics are computed and which findings apply.
@@ -73,7 +76,7 @@ class ColumnKind(str, Enum):
     EMPTY = "empty"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """How strongly a finding warrants attention.
 
     michi never decides *what to do* about a finding; severity only orders
@@ -119,6 +122,10 @@ class ColumnProfile:
     top_values
         Most frequent values as ``(value, count)`` pairs, for non-numeric
         kinds.
+    histogram
+        Binned distribution as ``(low, high, count)`` triples, for numeric
+        kinds. Stored in the artifact so that every renderer draws the same
+        distribution without re-reading the data.
 
     Examples
     --------
@@ -138,6 +145,7 @@ class ColumnProfile:
     unique: int
     stats: Mapping[str, float] = field(default_factory=dict)
     top_values: tuple[tuple[str, int], ...] = ()
+    histogram: tuple[tuple[float, float, int], ...] = ()
 
     def __post_init__(self) -> None:
         if self.count < 0 or self.missing < 0 or self.unique < 0:
@@ -171,6 +179,7 @@ class ColumnProfile:
             "unique": self.unique,
             "stats": dict(self.stats),
             "top_values": [list(pair) for pair in self.top_values],
+            "histogram": [list(triple) for triple in self.histogram],
         }
 
     @classmethod
@@ -187,6 +196,10 @@ class ColumnProfile:
             top_values=tuple(
                 (str(value), int(count))
                 for value, count in payload.get("top_values", [])
+            ),
+            histogram=tuple(
+                (float(low), float(high), int(count))
+                for low, high, count in payload.get("histogram", [])
             ),
         )
 

@@ -1,0 +1,291 @@
+# serializer version: 1
+# name: test_explained_rendering_is_stable
+  '''
+  
+   道  michi inspect  ·  passengers.csv
+  
+    891 rows × 4 columns  ·  24.3% of cells missing  ·  2 duplicate rows  ·  target       
+    survived                                                                              
+    sha256 cccccccccccc  ·  59.8 KB                                                       
+                                                                                          
+    column     kind          missing   unique   summary                                   
+    ──────────────────────────────────────────────────────────────────────────────────────
+    age        numeric         19.9%       88   mean 29.699  ·  range 0.42–80  ·  11      
+                                                outliers                                  
+    cabin      categorical     77.1%      147   top: B96 (4), C23 (4), G6 (4)             
+    embarked   categorical      0.2%        3   top: S (644), C (168), Q (77)             
+    survived   numeric             —        2   mean 0.384  ·  range 0–1                  
+                                                                                          
+    Findings (3)                                                                          
+                                                                                          
+    high    cabin  77.1% missing (687 of 891)                                             
+    warn    age    19.9% missing (177 of 891)                                             
+    info    age    11 values beyond 1.5×IQR (1.5%)                                        
+                                                                                          
+    What these mean                                                                       
+                                                                                          
+    Mostly missing column  (high-missing)                                                 
+      More than half of this column's values are absent. Imputing a majority of a column  
+      invents most of its content, and the imputed value itself becomes the dominant      
+      signal.                                                                             
+      Options:                                                                            
+        · drop the column                                                                 
+        · keep it and impute (mean, median, mode, or a constant)                          
+        · replace it with a boolean "was present" indicator                               
+        · keep it only for the subset of rows where it is present                         
+      Caution: Missingness is often informative — rows lacking a value may differ         
+      systematically from rows that have one.                                             
+                                                                                          
+    Missing values  (missing)                                                             
+      Some values are absent. Most estimators cannot train on missing values, so they must
+      be filled or the affected rows removed.                                             
+      Options:                                                                            
+        · impute with the median (robust to skew) or the mean                             
+        · impute with the most frequent value, for categorical columns                    
+        · impute with an explicit sentinel such as "unknown"                              
+        · drop the affected rows                                                          
+        · drop the column                                                                 
+        · add a boolean indicator recording where the value was missing                   
+      Caution: Compute imputation values from the training fold only. Imputing from the   
+      whole dataset leaks test-set information into training.                             
+                                                                                          
+    Extreme values  (outliers)                                                            
+      Some values sit far outside the interquartile range (beyond 1.5×IQR from the        
+      quartiles). They may be recording errors, or they may be the real, important tail of
+      the distribution.                                                                   
+      Options:                                                                            
+        · investigate the extreme rows before changing anything                           
+        · clip values to a percentile range (winsorise)                                   
+        · remove the affected rows                                                        
+        · use robust scaling instead of standardisation                                   
+        · leave them in place if they are genuine                                         
+      Caution: Removing outliers because a metric improves is how real signal gets        
+      deleted. Decide on the basis of what the values mean.                               
+                                                                                          
+                                                                                          
+  
+  '''
+# ---
+# name: test_html_rendering_is_stable
+  '''
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>michi inspect — data/passengers.csv</title>
+  <style>
+    :root {
+      --bg: #fbfaf8; --panel: #ffffff; --ink: #1c1b1a; --muted: #6b6764;
+      --line: #e6e2dc; --accent: #b23a30; --high: #c0392b; --warn: #b8860b;
+      --info: #7a7570; --bar: #cbd5e1; --bar-strong: #94a3b8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #17161a; --panel: #1e1d22; --ink: #ece9e4; --muted: #a09a94;
+        --line: #302e35; --accent: #e2645a; --high: #e2645a; --warn: #d4a548;
+        --info: #8b8580; --bar: #3a3942; --bar-strong: #5c5a66;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 2.5rem 1.5rem 5rem; background: var(--bg); color: var(--ink);
+      font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    header { border-bottom: 2px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+    .brand { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+    .brand .kanji { color: var(--accent); margin-right: .4rem; }
+    .file { color: var(--muted); font-size: 1rem; margin-top: .25rem;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .stats { display: flex; flex-wrap: wrap; gap: 2rem; margin: 1.5rem 0 0; }
+    .stat .value { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.02em; }
+    .stat .label { color: var(--muted); font-size: .8rem; text-transform: uppercase;
+                   letter-spacing: .06em; }
+    .note { margin-top: 1rem; padding: .7rem 1rem; border-left: 3px solid var(--warn);
+            background: var(--panel); color: var(--muted); font-size: .9rem; }
+    h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em;
+         color: var(--muted); margin: 2.5rem 0 1rem; font-weight: 600; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: .74rem; text-transform: uppercase; letter-spacing: .07em;
+         color: var(--muted); padding: .8rem 1rem; border-bottom: 1px solid var(--line);
+         font-weight: 600; }
+    td { padding: .7rem 1rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88rem; }
+    .kind { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+            padding: .15rem .5rem; border-radius: 4px; border: 1px solid var(--line);
+            color: var(--muted); }
+    .sev { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+           letter-spacing: .06em; padding: .15rem .5rem; border-radius: 4px; color: #fff; }
+    .sev-high { background: var(--high); }
+    .sev-warn { background: var(--warn); }
+    .sev-info { background: var(--info); }
+    .muted { color: var(--muted); }
+    .target { color: var(--accent); font-weight: 700; }
+    details { border-bottom: 1px solid var(--line); }
+    details:last-child { border-bottom: none; }
+    summary { padding: .9rem 1rem; cursor: pointer; font-weight: 600; }
+    summary::marker { color: var(--muted); }
+    .explain { padding: 0 1rem 1.2rem 1.8rem; color: var(--ink); }
+    .explain ul { margin: .5rem 0 0; padding-left: 1.2rem; color: var(--muted); }
+    .caution { margin-top: .8rem; font-size: .9rem; color: var(--warn); }
+    footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+             color: var(--muted); font-size: .82rem; display: flex; justify-content: space-between;
+             flex-wrap: wrap; gap: .5rem; }
+    .spark { display: block; }
+  </style>
+  </head>
+  <body>
+  <div class="wrap">
+  
+  <header>
+    <div class="brand"><span class="kanji">道</span>michi inspect</div>
+    <div class="file">data/passengers.csv</div>
+    <div class="stats">
+      <div class="stat"><div class="value">891</div><div class="label">rows</div></div>
+      <div class="stat"><div class="value">4</div><div class="label">columns</div></div>
+      <div class="stat"><div class="value">24.3%</div><div class="label">cells missing</div></div>
+      <div class="stat"><div class="value">2</div><div class="label">duplicate rows</div></div>
+      <div class="stat"><div class="value">3</div><div class="label">findings</div></div>
+      <div class="stat"><div class="value target">survived</div><div class="label">target</div></div>
+    </div>
+  </header>
+  
+  <h2>Findings</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>severity</th><th>where</th><th>what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="sev sev-high">high</span></td>
+          <td class="mono">cabin</td>
+          <td>77.1% missing (687 of 891)</td>
+        </tr>
+        <tr>
+          <td><span class="sev sev-warn">warn</span></td>
+          <td class="mono">age</td>
+          <td>19.9% missing (177 of 891)</td>
+        </tr>
+        <tr>
+          <td><span class="sev sev-info">info</span></td>
+          <td class="mono">age</td>
+          <td>11 values beyond 1.5×IQR (1.5%)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <h2>Columns</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>column</th><th>kind</th><th class="num">missing</th><th class="num">unique</th>
+            <th>distribution</th><th>summary</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono ">age</td>
+          <td><span class="kind">numeric</span></td>
+          <td class="num">19.9%</td>
+          <td class="num">88</td>
+          <td><svg class="spark" width="104" height="26" viewBox="0 0 104 26" role="img" aria-label="distribution"><rect x="0.00" y="2.00" width="51.00" height="24.00" fill="var(--bar-strong)" rx="0.5"/><rect x="52.00" y="15.73" width="51.00" height="10.27" fill="var(--bar-strong)" rx="0.5"/></svg></td>
+          <td class="muted">mean 29.699 · range 0.42–80 · 11 outliers</td>
+        </tr>
+        <tr>
+          <td class="mono ">cabin</td>
+          <td><span class="kind">categorical</span></td>
+          <td class="num">77.1%</td>
+          <td class="num">147</td>
+          <td><svg class="spark" width="104" height="26" viewBox="0 0 104 26" role="img" aria-label="top categories"><rect x="0" y="0.00" width="104.00" height="7.17" fill="var(--bar)" rx="1"/><rect x="0" y="8.67" width="104.00" height="7.17" fill="var(--bar)" rx="1"/><rect x="0" y="17.33" width="104.00" height="7.17" fill="var(--bar)" rx="1"/></svg></td>
+          <td class="muted">top: B96 (4), C23 (4), G6 (4)</td>
+        </tr>
+        <tr>
+          <td class="mono ">embarked</td>
+          <td><span class="kind">categorical</span></td>
+          <td class="num">0.2%</td>
+          <td class="num">3</td>
+          <td><svg class="spark" width="104" height="26" viewBox="0 0 104 26" role="img" aria-label="top categories"><rect x="0" y="0.00" width="104.00" height="7.17" fill="var(--bar)" rx="1"/><rect x="0" y="8.67" width="27.13" height="7.17" fill="var(--bar)" rx="1"/><rect x="0" y="17.33" width="12.43" height="7.17" fill="var(--bar)" rx="1"/></svg></td>
+          <td class="muted">top: S (644), C (168), Q (77)</td>
+        </tr>
+        <tr>
+          <td class="mono target">survived</td>
+          <td><span class="kind">numeric</span></td>
+          <td class="num"><span class="muted">—</span></td>
+          <td class="num">2</td>
+          <td><svg class="spark" width="104" height="26" viewBox="0 0 104 26" role="img" aria-label="distribution"><rect x="0.00" y="2.00" width="51.00" height="24.00" fill="var(--bar-strong)" rx="0.5"/><rect x="52.00" y="11.05" width="51.00" height="14.95" fill="var(--bar-strong)" rx="0.5"/></svg></td>
+          <td class="muted">mean 0.384 · range 0–1</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <h2>What these findings mean</h2>
+  <div class="card">
+    <details open>
+      <summary>Mostly missing column <span class="muted">· high-missing</span></summary>
+      <div class="explain">
+        <p>More than half of this column&#39;s values are absent. Imputing a majority of a column invents most of its content, and the imputed value itself becomes the dominant signal.</p>
+        <p class="muted"><strong>Options</strong></p>
+        <ul><li>drop the column</li><li>keep it and impute (mean, median, mode, or a constant)</li><li>replace it with a boolean &#34;was present&#34; indicator</li><li>keep it only for the subset of rows where it is present</li></ul>
+  <div class="caution"><strong>Caution:</strong> Missingness is often informative — rows lacking a value may differ systematically from rows that have one.</div>    </div>
+    </details>
+    <details>
+      <summary>Missing values <span class="muted">· missing</span></summary>
+      <div class="explain">
+        <p>Some values are absent. Most estimators cannot train on missing values, so they must be filled or the affected rows removed.</p>
+        <p class="muted"><strong>Options</strong></p>
+        <ul><li>impute with the median (robust to skew) or the mean</li><li>impute with the most frequent value, for categorical columns</li><li>impute with an explicit sentinel such as &#34;unknown&#34;</li><li>drop the affected rows</li><li>drop the column</li><li>add a boolean indicator recording where the value was missing</li></ul>
+  <div class="caution"><strong>Caution:</strong> Compute imputation values from the training fold only. Imputing from the whole dataset leaks test-set information into training.</div>    </div>
+    </details>
+    <details>
+      <summary>Extreme values <span class="muted">· outliers</span></summary>
+      <div class="explain">
+        <p>Some values sit far outside the interquartile range (beyond 1.5×IQR from the quartiles). They may be recording errors, or they may be the real, important tail of the distribution.</p>
+        <p class="muted"><strong>Options</strong></p>
+        <ul><li>investigate the extreme rows before changing anything</li><li>clip values to a percentile range (winsorise)</li><li>remove the affected rows</li><li>use robust scaling instead of standardisation</li><li>leave them in place if they are genuine</li></ul>
+  <div class="caution"><strong>Caution:</strong> Removing outliers because a metric improves is how real signal gets deleted. Decide on the basis of what the values mean.</div>    </div>
+    </details>
+  </div>
+  
+  <footer>
+    <span>michi 0.0.0 · profile schema 1.0 · generated 2026-01-01T00:00:00Z</span>
+    <span class="mono">sha256 cccccccccccccccc</span>
+  </footer>
+  
+  </div>
+  </body>
+  </html>
+  '''
+# ---
+# name: test_terminal_rendering_is_stable
+  '''
+  
+   道  michi inspect  ·  passengers.csv
+  
+    891 rows × 4 columns  ·  24.3% of cells missing  ·  2 duplicate rows  ·  target       
+    survived                                                                              
+    sha256 cccccccccccc  ·  59.8 KB                                                       
+                                                                                          
+    column     kind          missing   unique   summary                                   
+    ──────────────────────────────────────────────────────────────────────────────────────
+    age        numeric         19.9%       88   mean 29.699  ·  range 0.42–80  ·  11      
+                                                outliers                                  
+    cabin      categorical     77.1%      147   top: B96 (4), C23 (4), G6 (4)             
+    embarked   categorical      0.2%        3   top: S (644), C (168), Q (77)             
+    survived   numeric             —        2   mean 0.384  ·  range 0–1                  
+                                                                                          
+    Findings (3)                                                                          
+                                                                                          
+    high    cabin  77.1% missing (687 of 891)                                             
+    warn    age    19.9% missing (177 of 891)                                             
+    info    age    11 values beyond 1.5×IQR (1.5%)                                        
+                                                                                          
+    Run again with --explain for what each finding means and your options.                
+                                                                                          
+  
+  '''
+# ---

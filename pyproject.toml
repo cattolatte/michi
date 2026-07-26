@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "michi"
-version = "0.0.1"
+version = "0.1.0"
 description = "A local-first ML workbench: independent CLI tools that automate the repetitive implementation work of machine learning — never the judgement."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,7 +19,7 @@ keywords = [
   "eda",
 ]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
@@ -74,6 +74,10 @@ target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
+# michi's terminal and HTML output is typographic on purpose: en dashes for
+# numeric ranges, arrows for date ranges, middots as separators. These are
+# deliberate output characters, not homoglyph mistakes.
+allowed-confusables = ["–", "—", "→", "·", "×", "≈", "±"]
 select = [
   "E",   # pycodestyle errors
   "W",   # pycodestyle warnings
@@ -94,6 +98,7 @@ files = ["src/michi"]
 
 [[tool.mypy.overrides]]
 module = [
+  "pyarrow.*",
   "plotly.*",
   "sklearn.*",
   "joblib.*",

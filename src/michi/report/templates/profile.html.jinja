@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>michi inspect — {{ file_name }}</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --panel: #ffffff; --ink: #1c1b1a; --muted: #6b6764;
+    --line: #e6e2dc; --accent: #b23a30; --high: #c0392b; --warn: #b8860b;
+    --info: #7a7570; --bar: #cbd5e1; --bar-strong: #94a3b8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a; --panel: #1e1d22; --ink: #ece9e4; --muted: #a09a94;
+      --line: #302e35; --accent: #e2645a; --high: #e2645a; --warn: #d4a548;
+      --info: #8b8580; --bar: #3a3942; --bar-strong: #5c5a66;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1.5rem 5rem; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { border-bottom: 2px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  .brand { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+  .brand .kanji { color: var(--accent); margin-right: .4rem; }
+  .file { color: var(--muted); font-size: 1rem; margin-top: .25rem;
+          font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .stats { display: flex; flex-wrap: wrap; gap: 2rem; margin: 1.5rem 0 0; }
+  .stat .value { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.02em; }
+  .stat .label { color: var(--muted); font-size: .8rem; text-transform: uppercase;
+                 letter-spacing: .06em; }
+  .note { margin-top: 1rem; padding: .7rem 1rem; border-left: 3px solid var(--warn);
+          background: var(--panel); color: var(--muted); font-size: .9rem; }
+  h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--muted); margin: 2.5rem 0 1rem; font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: .74rem; text-transform: uppercase; letter-spacing: .07em;
+       color: var(--muted); padding: .8rem 1rem; border-bottom: 1px solid var(--line);
+       font-weight: 600; }
+  td { padding: .7rem 1rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88rem; }
+  .kind { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+          padding: .15rem .5rem; border-radius: 4px; border: 1px solid var(--line);
+          color: var(--muted); }
+  .sev { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+         letter-spacing: .06em; padding: .15rem .5rem; border-radius: 4px; color: #fff; }
+  .sev-high { background: var(--high); }
+  .sev-warn { background: var(--warn); }
+  .sev-info { background: var(--info); }
+  .muted { color: var(--muted); }
+  .target { color: var(--accent); font-weight: 700; }
+  details { border-bottom: 1px solid var(--line); }
+  details:last-child { border-bottom: none; }
+  summary { padding: .9rem 1rem; cursor: pointer; font-weight: 600; }
+  summary::marker { color: var(--muted); }
+  .explain { padding: 0 1rem 1.2rem 1.8rem; color: var(--ink); }
+  .explain ul { margin: .5rem 0 0; padding-left: 1.2rem; color: var(--muted); }
+  .caution { margin-top: .8rem; font-size: .9rem; color: var(--warn); }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .82rem; display: flex; justify-content: space-between;
+           flex-wrap: wrap; gap: .5rem; }
+  .spark { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand"><span class="kanji">道</span>michi inspect</div>
+  <div class="file">{{ file_name }}</div>
+  <div class="stats">
+    <div class="stat"><div class="value">{{ "{:,}".format(profile.n_rows) }}</div><div class="label">rows</div></div>
+    <div class="stat"><div class="value">{{ "{:,}".format(profile.n_columns) }}</div><div class="label">columns</div></div>
+    <div class="stat"><div class="value">{{ "%.1f"|format(profile.missing_pct) }}%</div><div class="label">cells missing</div></div>
+    <div class="stat"><div class="value">{{ "{:,}".format(profile.duplicate_rows) }}</div><div class="label">duplicate rows</div></div>
+    <div class="stat"><div class="value">{{ profile.findings|length }}</div><div class="label">findings</div></div>
+    {% if profile.target %}
+    <div class="stat"><div class="value target">{{ profile.target }}</div><div class="label">target</div></div>
+    {% endif %}
+  </div>
+  {% if profile.source.sampled %}
+  <div class="note">
+    Profiled a random sample of {{ "{:,}".format(profile.source.sample_rows) }} of
+    {{ "{:,}".format(profile.source.total_rows) }} rows (seed {{ profile.source.seed }}).
+    Re-run with <code>--full</code> to read every row.
+  </div>
+  {% endif %}
+</header>
+
+{% if findings %}
+<h2>Findings</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>severity</th><th>where</th><th>what</th></tr></thead>
+    <tbody>
+    {% for finding in findings %}
+      <tr>
+        <td><span class="sev sev-{{ finding.severity.value }}">{{ finding.severity.value }}</span></td>
+        <td class="mono">{{ finding.columns|join(", ") if finding.columns else "dataset" }}</td>
+        <td>{{ finding.summary }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<h2>Columns</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>column</th><th>kind</th><th class="num">missing</th><th class="num">unique</th>
+          <th>distribution</th><th>summary</th></tr>
+    </thead>
+    <tbody>
+    {% for column in profile.columns %}
+      <tr>
+        <td class="mono {% if column.name == profile.target %}target{% endif %}">{{ column.name }}</td>
+        <td><span class="kind">{{ column.kind.value }}</span></td>
+        <td class="num">{% if column.missing %}{{ "%.1f"|format(column.missing_pct) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="num">{{ "{:,}".format(column.unique) }}</td>
+        <td>{{ sparkline(column)|safe }}</td>
+        <td class="muted">{{ summarise(column) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if explanations %}
+<h2>What these findings mean</h2>
+<div class="card">
+  {% for item in explanations %}
+  <details{% if loop.first %} open{% endif %}>
+    <summary>{{ item.title }} <span class="muted">· {{ item.kind }}</span></summary>
+    <div class="explain">
+      <p>{{ item.what }}</p>
+      {% if item.options %}
+      <p class="muted"><strong>Options</strong></p>
+      <ul>{% for option in item.options %}<li>{{ option }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if item.caution %}<div class="caution"><strong>Caution:</strong> {{ item.caution }}</div>{% endif %}
+    </div>
+  </details>
+  {% endfor %}
+</div>
+{% endif %}
+
+<footer>
+  <span>michi {{ profile.michi_version }} · profile schema {{ profile.schema_version }} · generated {{ profile.created_at }}</span>
+  <span class="mono">sha256 {{ profile.source.sha256[:16] }}</span>
+</footer>
+
+</div>
+</body>
+</html>

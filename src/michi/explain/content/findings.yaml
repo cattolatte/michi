@@ -1,0 +1,253 @@
+# Explanations attached to inspection findings.
+#
+# This file is CONTENT, not code. It is reviewed like documentation, and edits
+# here never touch program logic.
+#
+# Rules for every entry:
+#   * `what` states what the observation means, factually.
+#   * `options` lists what practitioners commonly do — as a menu, in no
+#     particular order of preference. michi never recommends one of them.
+#   * `caution` (optional) names a trap that catches people.
+#
+# Entries are keyed by the finding `kind` emitted by michi.inspection.
+
+tiny-dataset:
+  title: Very few rows
+  what: >
+    The dataset has few rows, so every estimate computed from it — a metric, a
+    correlation, a class balance — carries wide uncertainty. Model comparisons
+    on small data frequently reverse when more data arrives.
+  options:
+    - collect or join more data before drawing conclusions
+    - use repeated k-fold cross-validation rather than a single split
+    - report confidence intervals alongside every metric
+    - proceed, treating results as directional rather than conclusive
+  caution: >
+    A single train/test split on a small dataset can swing several points of
+    accuracy purely by which rows landed where.
+
+duplicate-rows:
+  title: Duplicate rows
+  what: >
+    Some rows are exact copies of others. If duplicates end up on both sides of
+    a train/test split, the test set is no longer unseen data and scores are
+    optimistic.
+  options:
+    - drop exact duplicates
+    - keep them if repetition is meaningful (genuinely repeated events)
+    - investigate whether duplication came from a join or an export bug
+    - group by an entity key when splitting so copies stay on one side
+  caution: >
+    Deduplicating after splitting does not undo the leak; deduplicate first, or
+    split by a group key.
+
+empty-column:
+  title: Column is entirely missing
+  what: >
+    Every value in this column is missing, so it carries no information about
+    any row.
+  options:
+    - drop the column
+    - check whether an upstream export or join silently dropped the values
+  caution: >
+    An all-missing column often signals a broken pipeline rather than an
+    unimportant feature.
+
+constant-column:
+  title: Column has a single value
+  what: >
+    Every row shares the same value, so the column cannot help distinguish
+    rows and contributes nothing to a model.
+  options:
+    - drop the column
+    - check whether a filter upstream collapsed the variation
+  caution: >
+    If the column varies in production but not in this extract, the extract may
+    be unrepresentative.
+
+high-missing:
+  title: Mostly missing column
+  what: >
+    More than half of this column's values are absent. Imputing a majority of a
+    column invents most of its content, and the imputed value itself becomes
+    the dominant signal.
+  options:
+    - drop the column
+    - keep it and impute (mean, median, mode, or a constant)
+    - replace it with a boolean "was present" indicator
+    - keep it only for the subset of rows where it is present
+  caution: >
+    Missingness is often informative — rows lacking a value may differ
+    systematically from rows that have one.
+
+missing:
+  title: Missing values
+  what: >
+    Some values are absent. Most estimators cannot train on missing values, so
+    they must be filled or the affected rows removed.
+  options:
+    - impute with the median (robust to skew) or the mean
+    - impute with the most frequent value, for categorical columns
+    - impute with an explicit sentinel such as "unknown"
+    - drop the affected rows
+    - drop the column
+    - add a boolean indicator recording where the value was missing
+  caution: >
+    Compute imputation values from the training fold only. Imputing from the
+    whole dataset leaks test-set information into training.
+
+identifier-like:
+  title: Every value is distinct
+  what: >
+    The column has a different value in every row, which is the signature of an
+    identifier (a key, an order number, a hash) rather than a feature.
+  options:
+    - drop it from the feature set
+    - keep it aside as a join or grouping key for splitting
+    - derive features from it if it encodes structure (a prefix, a date)
+  caution: >
+    Tree models can memorise identifiers and score well in cross-validation
+    while learning nothing that generalises.
+
+high-cardinality:
+  title: Many distinct categories
+  what: >
+    The column holds a large number of distinct categories relative to its row
+    count. One-hot encoding it would create a very wide, very sparse matrix.
+  options:
+    - group rare categories into an "other" bucket
+    - use target or frequency encoding instead of one-hot
+    - use a model that handles categoricals natively
+    - drop the column
+  caution: >
+    Target encoding computed over the whole dataset leaks the label; fit it
+    inside the cross-validation loop.
+
+high-skew:
+  title: Skewed distribution
+  what: >
+    The column's values are concentrated on one side with a long tail on the
+    other. Models that assume roughly symmetric inputs — linear and distance
+    based ones — are most affected; tree ensembles are largely indifferent.
+  options:
+    - apply a log or square-root transform (log1p handles zeros)
+    - apply a quantile or power transform
+    - bin the values into ranges
+    - leave it unchanged, especially for tree-based models
+  caution: >
+    Log transforms are undefined at zero and negative values; shift first or
+    use log1p.
+
+outliers:
+  title: Extreme values
+  what: >
+    Some values sit far outside the interquartile range (beyond 1.5×IQR from
+    the quartiles). They may be recording errors, or they may be the real,
+    important tail of the distribution.
+  options:
+    - investigate the extreme rows before changing anything
+    - clip values to a percentile range (winsorise)
+    - remove the affected rows
+    - use robust scaling instead of standardisation
+    - leave them in place if they are genuine
+  caution: >
+    Removing outliers because a metric improves is how real signal gets
+    deleted. Decide on the basis of what the values mean.
+
+duplicate-columns:
+  title: Identical columns
+  what: >
+    Two or more columns contain exactly the same values, so they carry the
+    same information twice.
+  options:
+    - keep one and drop the rest
+    - check whether a join duplicated a field
+  caution: >
+    Duplicated features distort feature-importance rankings by splitting the
+    credit for a single signal.
+
+highly-correlated:
+  title: Nearly redundant columns
+  what: >
+    The two columns move together almost perfectly. They contribute
+    overlapping information, which destabilises linear-model coefficients and
+    splits feature importance between them.
+  options:
+    - keep one of the pair
+    - combine them (a ratio, a difference, a principal component)
+    - keep both, if the model is regularised or tree-based
+  caution: >
+    Extremely high correlation with the target — as opposed to another
+    feature — is usually leakage, not a great feature.
+
+numeric-stored-as-text:
+  title: Numbers stored as text
+  what: >
+    The column's values parse as numbers but are stored as strings, usually
+    because of thousands separators, currency symbols, or a stray non-numeric
+    marker. Left as text, they are treated as unordered categories.
+  options:
+    - convert to a numeric type, coercing unparseable entries to missing
+    - strip the offending characters first, then convert
+    - inspect the values that fail to parse before deciding
+  caution: >
+    Coercing silently turns every unparseable value into a missing one; count
+    them before and after.
+
+datetime-stored-as-text:
+  title: Dates stored as text
+  what: >
+    The values parse as dates but are stored as strings, so sorting is
+    lexicographic and no time arithmetic is possible.
+  options:
+    - parse to a datetime type
+    - derive components (year, month, day of week, hour)
+    - compute durations relative to a reference event
+  caution: >
+    With time-ordered data, split chronologically rather than randomly, or the
+    model trains on the future to predict the past.
+
+mixed-types:
+  title: Mixed value types
+  what: >
+    The column holds values of more than one Python type — numbers and strings
+    together, for instance. This usually means several sources or formats were
+    concatenated.
+  options:
+    - normalise every value to one type
+    - split the column into separate typed columns
+    - inspect the minority type to find its origin
+  caution: >
+    Mixed types make comparisons and sorts behave inconsistently across pandas
+    versions.
+
+class-imbalance:
+  title: Imbalanced classes
+  what: >
+    The target's classes are unevenly represented. Accuracy becomes misleading:
+    a model that always predicts the majority class can look strong while being
+    useless for the minority class.
+  options:
+    - keep the imbalance and judge with precision, recall, F1, or PR-AUC
+    - use stratified splits so every fold keeps the class ratio
+    - apply class weights in the estimator
+    - resample (oversample the minority, undersample the majority)
+    - adjust the decision threshold after training
+  caution: >
+    Resample inside the cross-validation loop, never before splitting;
+    oversampling first copies minority rows into both train and test.
+
+leakage-suspect:
+  title: Possible target leakage
+  what: >
+    This column predicts the target almost perfectly. That usually means it was
+    recorded at the same time as the outcome or after it, and will not be
+    available when the model is actually used.
+  options:
+    - check when the value becomes known relative to the prediction moment
+    - drop the column if it postdates the outcome
+    - keep it if it genuinely precedes the outcome and is available at inference
+  caution: >
+    Leakage is the most common cause of a model that scores superbly offline
+    and fails completely in production. michi can only raise the suspicion;
+    confirming it needs knowledge of how the data was produced.

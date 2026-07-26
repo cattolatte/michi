@@ -1,0 +1,1126 @@
+{
+  "schema_version": "1.0",
+  "michi_version": "0.1.0",
+  "created_at": "2026-01-01T00:00:00Z",
+  "source": {
+    "path": "data/customers.csv",
+    "sha256": "8b0f2ad7de6232b18ca83ec9d88c237d9018b82b46af93e7b7cb4891162eaa8a",
+    "size_bytes": 7453,
+    "format": "csv",
+    "total_rows": 120,
+    "sampled": false,
+    "sample_rows": null,
+    "seed": null
+  },
+  "n_rows": 120,
+  "n_columns": 13,
+  "duplicate_rows": 0,
+  "target": "purchased",
+  "columns": [
+    {
+      "name": "age",
+      "kind": "numeric",
+      "dtype": "int64",
+      "count": 120,
+      "missing": 0,
+      "unique": 45,
+      "stats": {
+        "mean": 41.625,
+        "std": 13.04102286290935,
+        "min": 20.0,
+        "p25": 30.75,
+        "median": 41.5,
+        "p75": 53.0,
+        "max": 64.0,
+        "iqr": 22.25,
+        "zeros": 0.0,
+        "negatives": 0.0,
+        "skew": 0.03174704751033547,
+        "kurtosis": -1.1926740873488857,
+        "outliers": 0.0,
+        "outlier_low": -2.625,
+        "outlier_high": 86.375
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          20.0,
+          22.2,
+          9
+        ],
+        [
+          22.2,
+          24.4,
+          5
+        ],
+        [
+          24.4,
+          26.6,
+          5
+        ],
+        [
+          26.6,
+          28.8,
+          6
+        ],
+        [
+          28.8,
+          31.0,
+          5
+        ],
+        [
+          31.0,
+          33.2,
+          8
+        ],
+        [
+          33.2,
+          35.400000000000006,
+          6
+        ],
+        [
+          35.400000000000006,
+          37.6,
+          5
+        ],
+        [
+          37.6,
+          39.8,
+          6
+        ],
+        [
+          39.8,
+          42.0,
+          5
+        ],
+        [
+          42.0,
+          44.2,
+          8
+        ],
+        [
+          44.2,
+          46.400000000000006,
+          6
+        ],
+        [
+          46.400000000000006,
+          48.6,
+          5
+        ],
+        [
+          48.6,
+          50.800000000000004,
+          5
+        ],
+        [
+          50.800000000000004,
+          53.0,
+          5
+        ],
+        [
+          53.0,
+          55.2,
+          8
+        ],
+        [
+          55.2,
+          57.400000000000006,
+          5
+        ],
+        [
+          57.400000000000006,
+          59.6,
+          5
+        ],
+        [
+          59.6,
+          61.800000000000004,
+          5
+        ],
+        [
+          61.800000000000004,
+          64.0,
+          8
+        ]
+      ]
+    },
+    {
+      "name": "salary",
+      "kind": "numeric",
+      "dtype": "float64",
+      "count": 106,
+      "missing": 14,
+      "unique": 106,
+      "stats": {
+        "mean": 38169.59433962264,
+        "std": 4737.273770506573,
+        "min": 30137.0,
+        "p25": 34144.25,
+        "median": 38151.5,
+        "p75": 42158.75,
+        "max": 46303.0,
+        "iqr": 8014.5,
+        "zeros": 0.0,
+        "negatives": 0.0,
+        "skew": 0.0013033425806133886,
+        "kurtosis": -1.2010133179737574,
+        "outliers": 0.0,
+        "outlier_low": 22122.5,
+        "outlier_high": 54180.5
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          30137.0,
+          30945.3,
+          6
+        ],
+        [
+          30945.3,
+          31753.6,
+          5
+        ],
+        [
+          31753.6,
+          32561.9,
+          5
+        ],
+        [
+          32561.9,
+          33370.2,
+          6
+        ],
+        [
+          33370.2,
+          34178.5,
+          5
+        ],
+        [
+          34178.5,
+          34986.8,
+          5
+        ],
+        [
+          34986.8,
+          35795.1,
+          6
+        ],
+        [
+          35795.1,
+          36603.4,
+          5
+        ],
+        [
+          36603.4,
+          37411.7,
+          5
+        ],
+        [
+          37411.7,
+          38220.0,
+          5
+        ],
+        [
+          38220.0,
+          39028.3,
+          5
+        ],
+        [
+          39028.3,
+          39836.6,
+          6
+        ],
+        [
+          39836.6,
+          40644.9,
+          5
+        ],
+        [
+          40644.9,
+          41453.2,
+          5
+        ],
+        [
+          41453.2,
+          42261.5,
+          6
+        ],
+        [
+          42261.5,
+          43069.8,
+          5
+        ],
+        [
+          43069.8,
+          43878.1,
+          5
+        ],
+        [
+          43878.1,
+          44686.4,
+          6
+        ],
+        [
+          44686.4,
+          45494.7,
+          5
+        ],
+        [
+          45494.7,
+          46303.0,
+          5
+        ]
+      ]
+    },
+    {
+      "name": "cabin",
+      "kind": "categorical",
+      "dtype": "str",
+      "count": 15,
+      "missing": 105,
+      "unique": 15,
+      "stats": {},
+      "top_values": [
+        [
+          "C0",
+          1
+        ],
+        [
+          "C8",
+          1
+        ],
+        [
+          "C16",
+          1
+        ],
+        [
+          "C24",
+          1
+        ],
+        [
+          "C32",
+          1
+        ]
+      ],
+      "histogram": []
+    },
+    {
+      "name": "notes",
+      "kind": "empty",
+      "dtype": "float64",
+      "count": 0,
+      "missing": 120,
+      "unique": 0,
+      "stats": {},
+      "top_values": [],
+      "histogram": []
+    },
+    {
+      "name": "country",
+      "kind": "categorical",
+      "dtype": "str",
+      "count": 120,
+      "missing": 0,
+      "unique": 1,
+      "stats": {},
+      "top_values": [
+        [
+          "JP",
+          120
+        ]
+      ],
+      "histogram": []
+    },
+    {
+      "name": "record_id",
+      "kind": "text",
+      "dtype": "str",
+      "count": 120,
+      "missing": 0,
+      "unique": 120,
+      "stats": {
+        "mean_length": 7.0,
+        "min_length": 7.0,
+        "max_length": 7.0
+      },
+      "top_values": [
+        [
+          "id-0000",
+          1
+        ],
+        [
+          "id-0001",
+          1
+        ],
+        [
+          "id-0002",
+          1
+        ],
+        [
+          "id-0003",
+          1
+        ],
+        [
+          "id-0004",
+          1
+        ]
+      ],
+      "histogram": []
+    },
+    {
+      "name": "fare",
+      "kind": "numeric",
+      "dtype": "float64",
+      "count": 120,
+      "missing": 0,
+      "unique": 11,
+      "stats": {
+        "mean": 259.175,
+        "std": 1566.3228611151985,
+        "min": 5.0,
+        "p25": 7.0,
+        "median": 9.5,
+        "p75": 12.0,
+        "max": 10000.0,
+        "iqr": 5.0,
+        "zeros": 0.0,
+        "negatives": 0.0,
+        "skew": 6.162134274401251,
+        "kurtosis": 36.58153323801945,
+        "outliers": 3.0,
+        "outlier_low": -0.5,
+        "outlier_high": 19.5
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          5.0,
+          504.75,
+          117
+        ],
+        [
+          504.75,
+          1004.5,
+          0
+        ],
+        [
+          1004.5,
+          1504.25,
+          0
+        ],
+        [
+          1504.25,
+          2004.0,
+          0
+        ],
+        [
+          2004.0,
+          2503.75,
+          0
+        ],
+        [
+          2503.75,
+          3003.5,
+          0
+        ],
+        [
+          3003.5,
+          3503.25,
+          0
+        ],
+        [
+          3503.25,
+          4003.0,
+          0
+        ],
+        [
+          4003.0,
+          4502.75,
+          0
+        ],
+        [
+          4502.75,
+          5002.5,
+          0
+        ],
+        [
+          5002.5,
+          5502.25,
+          0
+        ],
+        [
+          5502.25,
+          6002.0,
+          0
+        ],
+        [
+          6002.0,
+          6501.75,
+          0
+        ],
+        [
+          6501.75,
+          7001.5,
+          0
+        ],
+        [
+          7001.5,
+          7501.25,
+          0
+        ],
+        [
+          7501.25,
+          8001.0,
+          0
+        ],
+        [
+          8001.0,
+          8500.75,
+          0
+        ],
+        [
+          8500.75,
+          9000.5,
+          0
+        ],
+        [
+          9000.5,
+          9500.25,
+          0
+        ],
+        [
+          9500.25,
+          10000.0,
+          3
+        ]
+      ]
+    },
+    {
+      "name": "amount_text",
+      "kind": "numeric",
+      "dtype": "int64",
+      "count": 120,
+      "missing": 0,
+      "unique": 120,
+      "stats": {
+        "mean": 1059.5,
+        "std": 34.785054261852174,
+        "min": 1000.0,
+        "p25": 1029.75,
+        "median": 1059.5,
+        "p75": 1089.25,
+        "max": 1119.0,
+        "iqr": 59.5,
+        "zeros": 0.0,
+        "negatives": 0.0,
+        "skew": 0.0,
+        "kurtosis": -1.2000000000000002,
+        "outliers": 0.0,
+        "outlier_low": 940.5,
+        "outlier_high": 1178.5
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          1000.0,
+          1005.95,
+          6
+        ],
+        [
+          1005.95,
+          1011.9,
+          6
+        ],
+        [
+          1011.9,
+          1017.85,
+          6
+        ],
+        [
+          1017.85,
+          1023.8,
+          6
+        ],
+        [
+          1023.8,
+          1029.75,
+          6
+        ],
+        [
+          1029.75,
+          1035.7,
+          6
+        ],
+        [
+          1035.7,
+          1041.65,
+          6
+        ],
+        [
+          1041.65,
+          1047.6,
+          6
+        ],
+        [
+          1047.6,
+          1053.55,
+          6
+        ],
+        [
+          1053.55,
+          1059.5,
+          6
+        ],
+        [
+          1059.5,
+          1065.45,
+          6
+        ],
+        [
+          1065.45,
+          1071.4,
+          6
+        ],
+        [
+          1071.4,
+          1077.35,
+          6
+        ],
+        [
+          1077.35,
+          1083.3,
+          6
+        ],
+        [
+          1083.3,
+          1089.25,
+          6
+        ],
+        [
+          1089.25,
+          1095.2,
+          6
+        ],
+        [
+          1095.2,
+          1101.15,
+          6
+        ],
+        [
+          1101.15,
+          1107.1,
+          6
+        ],
+        [
+          1107.1,
+          1113.05,
+          6
+        ],
+        [
+          1113.05,
+          1119.0,
+          6
+        ]
+      ]
+    },
+    {
+      "name": "signup_date",
+      "kind": "categorical",
+      "dtype": "str",
+      "count": 120,
+      "missing": 0,
+      "unique": 12,
+      "stats": {},
+      "top_values": [
+        [
+          "2024-01-15",
+          10
+        ],
+        [
+          "2024-02-15",
+          10
+        ],
+        [
+          "2024-03-15",
+          10
+        ],
+        [
+          "2024-04-15",
+          10
+        ],
+        [
+          "2024-05-15",
+          10
+        ]
+      ],
+      "histogram": []
+    },
+    {
+      "name": "age_months",
+      "kind": "numeric",
+      "dtype": "int64",
+      "count": 120,
+      "missing": 0,
+      "unique": 45,
+      "stats": {
+        "mean": 499.5,
+        "std": 156.49227435491218,
+        "min": 240.0,
+        "p25": 369.0,
+        "median": 498.0,
+        "p75": 636.0,
+        "max": 768.0,
+        "iqr": 267.0,
+        "zeros": 0.0,
+        "negatives": 0.0,
+        "skew": 0.031747047510335476,
+        "kurtosis": -1.192674087348886,
+        "outliers": 0.0,
+        "outlier_low": -31.5,
+        "outlier_high": 1036.5
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          240.0,
+          266.4,
+          9
+        ],
+        [
+          266.4,
+          292.8,
+          5
+        ],
+        [
+          292.8,
+          319.2,
+          5
+        ],
+        [
+          319.2,
+          345.6,
+          6
+        ],
+        [
+          345.6,
+          372.0,
+          5
+        ],
+        [
+          372.0,
+          398.4,
+          8
+        ],
+        [
+          398.4,
+          424.79999999999995,
+          6
+        ],
+        [
+          424.79999999999995,
+          451.2,
+          5
+        ],
+        [
+          451.2,
+          477.6,
+          6
+        ],
+        [
+          477.6,
+          504.0,
+          5
+        ],
+        [
+          504.0,
+          530.4,
+          8
+        ],
+        [
+          530.4,
+          556.8,
+          6
+        ],
+        [
+          556.8,
+          583.2,
+          5
+        ],
+        [
+          583.2,
+          609.5999999999999,
+          5
+        ],
+        [
+          609.5999999999999,
+          636.0,
+          5
+        ],
+        [
+          636.0,
+          662.4,
+          8
+        ],
+        [
+          662.4,
+          688.8,
+          5
+        ],
+        [
+          688.8,
+          715.2,
+          5
+        ],
+        [
+          715.2,
+          741.5999999999999,
+          5
+        ],
+        [
+          741.5999999999999,
+          768.0,
+          8
+        ]
+      ]
+    },
+    {
+      "name": "country_copy",
+      "kind": "categorical",
+      "dtype": "str",
+      "count": 120,
+      "missing": 0,
+      "unique": 1,
+      "stats": {},
+      "top_values": [
+        [
+          "JP",
+          120
+        ]
+      ],
+      "histogram": []
+    },
+    {
+      "name": "outcome_code",
+      "kind": "categorical",
+      "dtype": "str",
+      "count": 120,
+      "missing": 0,
+      "unique": 2,
+      "stats": {},
+      "top_values": [
+        [
+          "class-0",
+          60
+        ],
+        [
+          "class-1",
+          60
+        ]
+      ],
+      "histogram": []
+    },
+    {
+      "name": "purchased",
+      "kind": "numeric",
+      "dtype": "int64",
+      "count": 120,
+      "missing": 0,
+      "unique": 2,
+      "stats": {
+        "mean": 0.08333333333333333,
+        "std": 0.27754425291281026,
+        "min": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "max": 1.0,
+        "iqr": 0.0,
+        "zeros": 110.0,
+        "negatives": 0.0,
+        "skew": 3.053414431120901,
+        "kurtosis": 7.44719687092568,
+        "outliers": 0.0
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          0.0,
+          0.05,
+          110
+        ],
+        [
+          0.05,
+          0.1,
+          0
+        ],
+        [
+          0.1,
+          0.15000000000000002,
+          0
+        ],
+        [
+          0.15000000000000002,
+          0.2,
+          0
+        ],
+        [
+          0.2,
+          0.25,
+          0
+        ],
+        [
+          0.25,
+          0.30000000000000004,
+          0
+        ],
+        [
+          0.30000000000000004,
+          0.35000000000000003,
+          0
+        ],
+        [
+          0.35000000000000003,
+          0.4,
+          0
+        ],
+        [
+          0.4,
+          0.45,
+          0
+        ],
+        [
+          0.45,
+          0.5,
+          0
+        ],
+        [
+          0.5,
+          0.55,
+          0
+        ],
+        [
+          0.55,
+          0.6000000000000001,
+          0
+        ],
+        [
+          0.6000000000000001,
+          0.65,
+          0
+        ],
+        [
+          0.65,
+          0.7000000000000001,
+          0
+        ],
+        [
+          0.7000000000000001,
+          0.75,
+          0
+        ],
+        [
+          0.75,
+          0.8,
+          0
+        ],
+        [
+          0.8,
+          0.8500000000000001,
+          0
+        ],
+        [
+          0.8500000000000001,
+          0.9,
+          0
+        ],
+        [
+          0.9,
+          0.9500000000000001,
+          0
+        ],
+        [
+          0.9500000000000001,
+          1.0,
+          10
+        ]
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "kind": "constant-column",
+      "severity": "high",
+      "columns": [
+        "country"
+      ],
+      "summary": "only one distinct value (JP)",
+      "metrics": {
+        "value": "JP"
+      }
+    },
+    {
+      "kind": "constant-column",
+      "severity": "high",
+      "columns": [
+        "country_copy"
+      ],
+      "summary": "only one distinct value (JP)",
+      "metrics": {
+        "value": "JP"
+      }
+    },
+    {
+      "kind": "empty-column",
+      "severity": "high",
+      "columns": [
+        "notes"
+      ],
+      "summary": "every value is missing",
+      "metrics": {
+        "rows": 120
+      }
+    },
+    {
+      "kind": "high-missing",
+      "severity": "high",
+      "columns": [
+        "cabin"
+      ],
+      "summary": "87.5% missing (105 of 120)",
+      "metrics": {
+        "pct": 87.5,
+        "count": 105
+      }
+    },
+    {
+      "kind": "leakage-suspect",
+      "severity": "high",
+      "columns": [
+        "signup_date"
+      ],
+      "summary": "each of its 12 values maps to exactly one 'purchased' class",
+      "metrics": {
+        "groups": 12,
+        "coverage": 1.0
+      }
+    },
+    {
+      "kind": "class-imbalance",
+      "severity": "warn",
+      "columns": [
+        "purchased"
+      ],
+      "summary": "smallest class 8.3% vs largest 91.7% across 2 classes",
+      "metrics": {
+        "minority_pct": 8.333,
+        "majority_pct": 91.667,
+        "classes": 2
+      }
+    },
+    {
+      "kind": "datetime-stored-as-text",
+      "severity": "warn",
+      "columns": [
+        "signup_date"
+      ],
+      "summary": "values parse as dates but are stored as text",
+      "metrics": {
+        "sampled": 120
+      }
+    },
+    {
+      "kind": "duplicate-columns",
+      "severity": "warn",
+      "columns": [
+        "country",
+        "country_copy"
+      ],
+      "summary": "identical values in country, country_copy",
+      "metrics": {
+        "count": 2
+      }
+    },
+    {
+      "kind": "high-skew",
+      "severity": "warn",
+      "columns": [
+        "fare"
+      ],
+      "summary": "skew 6.16 (right-tailed)",
+      "metrics": {
+        "skew": 6.1621
+      }
+    },
+    {
+      "kind": "highly-correlated",
+      "severity": "warn",
+      "columns": [
+        "age",
+        "age_months"
+      ],
+      "summary": "correlation +1.000",
+      "metrics": {
+        "correlation": 1.0
+      }
+    },
+    {
+      "kind": "highly-correlated",
+      "severity": "warn",
+      "columns": [
+        "amount_text",
+        "salary"
+      ],
+      "summary": "correlation +1.000",
+      "metrics": {
+        "correlation": 1.0
+      }
+    },
+    {
+      "kind": "missing",
+      "severity": "warn",
+      "columns": [
+        "salary"
+      ],
+      "summary": "11.7% missing (14 of 120)",
+      "metrics": {
+        "pct": 11.667,
+        "count": 14
+      }
+    },
+    {
+      "kind": "high-skew",
+      "severity": "info",
+      "columns": [
+        "purchased"
+      ],
+      "summary": "skew 3.05 (right-tailed)",
+      "metrics": {
+        "skew": 3.0534
+      }
+    },
+    {
+      "kind": "identifier-like",
+      "severity": "info",
+      "columns": [
+        "record_id"
+      ],
+      "summary": "every value is distinct (looks like an identifier)",
+      "metrics": {
+        "unique": 120
+      }
+    },
+    {
+      "kind": "outliers",
+      "severity": "info",
+      "columns": [
+        "fare"
+      ],
+      "summary": "3 values beyond 1.5×IQR (2.5%)",
+      "metrics": {
+        "count": 3,
+        "pct": 2.5
+      }
+    }
+  ]
+}

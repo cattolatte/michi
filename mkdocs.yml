@@ -18,5 +18,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Commands:
+      - inspect: inspect.md
   - Philosophy: philosophy.md
   - Roadmap: roadmap.md

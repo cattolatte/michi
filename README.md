@@ -46,7 +46,7 @@ Optional extras: `michi[bench]` (XGBoost, LightGBM, CatBoost), `michi[excel]`,
 
 | Verb | What it does | Status |
 |---|---|---|
-| `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers — every finding explained | ✅ v0.1 |
+| `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers, leakage suspects — every finding explained | ✅ **v0.1** |
 | `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics, calibration, baselines, leakage checks | 🔜 v0.2 |
 | `michi bench … --models rf,logreg,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | 🔜 v0.3 |
 | `michi clean` / `apply` / `export` | Interactive cleaning that authors a reproducible recipe and exports readable pipeline code | 🔜 v0.4 |
@@ -58,26 +58,46 @@ Optional extras: `michi[bench]` (XGBoost, LightGBM, CatBoost), `michi[excel]`,
 ## Quick look
 
 ```bash
-michi inspect data/titanic.csv --target survived
+michi inspect data/customers.csv --target purchased
 ```
 
 ```
- 道  michi inspect — titanic.csv
+ 道  michi inspect  ·  customers.csv
 
-  891 rows × 12 columns · 3.2% missing overall
+  120 rows × 13 columns  ·  15.3% of cells missing  ·  0 duplicate rows
+  target purchased
+  sha256 8b0f2ad7de62  ·  7.3 KB
 
-  Findings (7)
-  ● high    cabin              77.1% missing
-  ● warn    age                19.9% missing
-  ● warn    survived           class imbalance 61.6% / 38.4%
-  ● info    fare               skew 4.79 (right-tailed)
+  column         kind          missing   unique   summary
+  ────────────────────────────────────────────────────────────────────────
+  age            numeric             —       45   mean 41.625 · range 20–64
+  salary         numeric         11.7%      106   mean 38,169 · range 30,137–46,303
+  cabin          categorical     87.5%       15   top: C0 (1), C8 (1), C16 (1)
+  notes          empty          100.0%        0
+  fare           numeric             —       11   mean 259 · skew +6.16 · 3 outliers
   …
 
-  Run with --explain for what each finding means and your options.
+  Findings (15)
+
+  high    notes                  every value is missing
+  high    country                only one distinct value (JP)
+  high    cabin                  87.5% missing (105 of 120)
+  high    outcome_code           each of its 2 values maps to exactly one
+                                 'purchased' class
+  warn    purchased              smallest class 8.3% vs largest 91.7%
+  warn    age, age_months        correlation +1.000
+  warn    signup_date            values parse as dates but are stored as text
+  …
+
+  Run again with --explain for what each finding means and your options.
 ```
 
-Add `--html profile.html` for a self-contained offline report, or `--json
-profile.json` for a machine-readable profile you can diff in CI.
+Add `--html profile.html` for a [self-contained offline report](examples/profile.html)
+(34 KB, no CDN, no JavaScript), or `--json profile.json` for a
+[machine-readable profile](examples/profile.json) you can diff in CI. In a
+pipeline, `--fail-on high` turns michi into a data-quality gate.
+
+Full options: [`michi inspect` documentation](docs/inspect.md).
 
 ## Philosophy
 

@@ -66,9 +66,7 @@ def supported_formats() -> tuple[str, ...]:
     >>> ".csv" in supported_formats()
     True
     """
-    return tuple(
-        sorted({*_CSV_SUFFIXES, *_PARQUET_SUFFIXES, *_EXCEL_SUFFIXES})
-    )
+    return tuple(sorted({*_CSV_SUFFIXES, *_PARQUET_SUFFIXES, *_EXCEL_SUFFIXES}))
 
 
 def _detect_format(path: Path) -> str:
@@ -177,7 +175,7 @@ def _read_csv(
         except pd.errors.EmptyDataError as err:
             msg = f"{path} contains no parseable rows"
             raise DataError(msg) from err
-        except Exception as err:  # noqa: BLE001 - third-party failure boundary
+        except Exception as err:  # third-party failure boundary
             msg = f"could not parse {path.name} as delimited text: {err}"
             raise DataError(msg) from err
         return frame, int(frame.shape[0]), False
@@ -202,7 +200,7 @@ def _count_csv_rows(path: Path, delimiter: str) -> int:
     try:
         with pa_csv.open_csv(str(path), parse_options=options) as reader:
             return sum(batch.num_rows for batch in reader)
-    except Exception as err:  # noqa: BLE001 - third-party failure boundary
+    except Exception as err:  # third-party failure boundary
         msg = f"could not scan {path.name}: {err}"
         raise DataError(msg) from err
 
@@ -225,7 +223,7 @@ def _stream_csv_sample(
                     continue
                 chunk = batch.to_pandas()
                 frames.append(chunk.loc[mask].reset_index(drop=True))
-    except Exception as err:  # noqa: BLE001 - third-party failure boundary
+    except Exception as err:  # third-party failure boundary
         msg = f"could not sample {path.name}: {err}"
         raise DataError(msg) from err
     return frames
@@ -241,7 +239,7 @@ def _read_parquet(
 
     try:
         parquet_file = pq.ParquetFile(str(path))
-    except Exception as err:  # noqa: BLE001 - third-party failure boundary
+    except Exception as err:  # third-party failure boundary
         msg = f"could not open {path.name} as parquet: {err}"
         raise DataError(msg) from err
 
@@ -276,11 +274,10 @@ def _read_excel(path: Path) -> tuple[pd.DataFrame, int, bool]:
         frame = pd.read_excel(path)
     except ImportError as err:
         msg = (
-            "reading spreadsheets requires the excel extra: "
-            "pip install 'michi[excel]'"
+            "reading spreadsheets requires the excel extra: pip install 'michi[excel]'"
         )
         raise DataError(msg) from err
-    except Exception as err:  # noqa: BLE001 - third-party failure boundary
+    except Exception as err:  # third-party failure boundary
         msg = f"could not read {path.name} as a spreadsheet: {err}"
         raise DataError(msg) from err
     return frame, int(frame.shape[0]), False
