@@ -1,0 +1,110 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "michi"
+version = "0.0.1"
+description = "A local-first ML workbench: independent CLI tools that automate the repetitive implementation work of machine learning — never the judgement."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "K Satya Sai Nischal" }]
+keywords = [
+  "machine-learning",
+  "cli",
+  "data-science",
+  "benchmarking",
+  "evaluation",
+  "eda",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Typing :: Typed",
+]
+dependencies = [
+  "typer>=0.12",
+  "rich>=13.7",
+  "pandas>=2.1",
+  "pyarrow>=15.0",
+  "scikit-learn>=1.4",
+  "jinja2>=3.1",
+  "pyyaml>=6.0",
+  "plotly>=5.20",
+]
+
+[project.optional-dependencies]
+bench = ["xgboost>=2.0", "lightgbm>=4.3", "catboost>=1.2"]
+excel = ["openpyxl>=3.1"]
+shap = ["shap>=0.45"]
+ui = ["fastapi>=0.110", "uvicorn>=0.29"]
+docs = ["mkdocs-material>=9.5"]
+dev = [
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "pytest>=8.2",
+  "syrupy>=4.6",
+  "hypothesis>=6.100",
+  "pandas-stubs>=2.1",
+  "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+michi = "michi.cli.app:app"
+
+[project.urls]
+Repository = "https://github.com/coderstale/michi"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/michi"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # import sorting
+  "UP",  # pyupgrade
+  "B",   # bugbear
+  "C4",  # comprehensions
+  "SIM", # simplify
+  "RUF", # ruff-specific
+]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+mypy_path = "src"
+files = ["src/michi"]
+
+[[tool.mypy.overrides]]
+module = [
+  "plotly.*",
+  "sklearn.*",
+  "joblib.*",
+  "xgboost.*",
+  "lightgbm.*",
+  "catboost.*",
+  "shap.*",
+  "questionary.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
