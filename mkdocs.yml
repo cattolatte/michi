@@ -21,5 +21,7 @@ nav:
   - Commands:
       - inspect: inspect.md
       - eval: eval.md
+      - bench: bench.md
+      - report: report.md
   - Philosophy: philosophy.md
   - Roadmap: roadmap.md

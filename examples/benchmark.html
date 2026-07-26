@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>michi bench — churned</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --panel: #ffffff; --ink: #1c1b1a; --muted: #6b6764;
+    --line: #e6e2dc; --accent: #b23a30; --high: #c0392b; --warn: #b8860b;
+    --info: #7a7570; --good: #2e7d32; --bar: #cbd5e1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161a; --panel: #1e1d22; --ink: #ece9e4; --muted: #a09a94;
+      --line: #302e35; --accent: #e2645a; --high: #e2645a; --warn: #d4a548;
+      --info: #8b8580; --good: #6aab6e; --bar: #3a3942;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1.5rem 5rem; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; }
+  header { border-bottom: 2px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  .brand { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+  .brand .kanji { color: var(--accent); margin-right: .4rem; }
+  .sub { color: var(--muted); margin-top: .25rem; }
+  .stats { display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 1.5rem; }
+  .stat .value { font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; }
+  .stat .label { color: var(--muted); font-size: .78rem; text-transform: uppercase;
+                 letter-spacing: .06em; }
+  h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--muted); margin: 2.5rem 0 1rem; font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: .74rem; text-transform: uppercase; letter-spacing: .07em;
+       color: var(--muted); padding: .8rem 1rem; border-bottom: 1px solid var(--line);
+       font-weight: 600; }
+  td { padding: .75rem 1rem; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9rem; }
+  .leader { font-weight: 700; color: var(--good); }
+  .tied { color: var(--warn); }
+  .failed { color: var(--high); }
+  .muted { color: var(--muted); }
+  .verdict { background: var(--panel); border: 1px solid var(--line);
+             border-left: 3px solid var(--accent); border-radius: 8px;
+             padding: 1rem 1.2rem; margin-top: 1rem; }
+  .sev { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+         letter-spacing: .06em; padding: .15rem .5rem; border-radius: 4px; color: #fff; }
+  .sev-high { background: var(--high); }
+  .sev-warn { background: var(--warn); }
+  .sev-info { background: var(--info); }
+  .note { color: var(--muted); font-size: .86rem; margin-top: 1rem; }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .82rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand"><span class="kanji">道</span>michi bench</div>
+  <div class="sub mono">target: churned</div>
+  <div class="stats">
+    <div class="stat"><div class="value">5</div><div class="label">models</div></div>
+    <div class="stat"><div class="value">490</div><div class="label">rows</div></div>
+    <div class="stat"><div class="value">5</div><div class="label">folds</div></div>
+    <div class="stat"><div class="value">classification</div><div class="label">task</div></div>
+    <div class="stat"><div class="value">balanced_accuracy</div><div class="label">ranked by</div></div>
+  </div>
+</header>
+
+<h2>Results</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>model</th><th class="num">balanced_accuracy</th>
+          <th class="num">95% interval</th><th>vs leader</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono leader">knn</td>
+        <td class="num ">0.7149</td>
+        <td class="num muted">0.613–0.8167</td>
+        <td class="leader">leader</td>
+      </tr>
+      <tr>
+        <td class="mono ">linear</td>
+        <td class="num ">0.7083</td>
+        <td class="num muted">0.6278–0.7888</td>
+        <td class="tied">tied with leader (p=0.992)</td>
+      </tr>
+      <tr>
+        <td class="mono ">hist-gbm</td>
+        <td class="num ">0.6955</td>
+        <td class="num muted">0.6058–0.7853</td>
+        <td class="tied">tied with leader (p=0.992)</td>
+      </tr>
+      <tr>
+        <td class="mono ">rf</td>
+        <td class="num ">0.694</td>
+        <td class="num muted">0.6157–0.7723</td>
+        <td class="tied">tied with leader (p=0.992)</td>
+      </tr>
+      <tr>
+        <td class="mono ">dummy</td>
+        <td class="num ">0.5</td>
+        <td class="num muted">0.5–0.5</td>
+        <td class="tied">tied with leader (p=0.0698)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="verdict">
+  <strong>Verdict.</strong>
+      <code>knn</code> scores highest, but
+<code>linear</code>, <code>hist-gbm</code>, <code>rf</code>, <code>dummy</code>      are statistically indistinguishable
+      from it at this sample size. Choosing between them on these numbers alone
+      is not supported.
+</div>
+
+<h2>Checks</h2>
+<div class="card">
+  <table>
+    <tbody>
+      <tr>
+        <td style="width:1%"><span class="sev sev-warn">warn</span></td>
+        <td>4 model(s) are not statistically distinguishable from knn: linear, hist-gbm, rf, dummy</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>How this was measured</h2>
+<div class="card">
+  <table>
+    <tbody>
+      <tr><td class="muted" style="width:30%">cross-validation</td><td>5-fold, stratified, shuffled with seed 0</td></tr>
+      <tr><td class="muted">preparation</td><td>numeric: impute median · categorical: impute most_frequent + onehot · standardise (scale-sensitive models only) — fitted inside each fold</td></tr>
+      <tr><td class="muted">baseline</td><td>a dummy model is always included as the floor</td></tr>
+      <tr><td class="muted">significance</td><td>corrected resampled <i>t</i>-test (Nadeau &amp; Bengio, 2003), Holm-adjusted across models</td></tr>
+      <tr><td class="muted">intervals</td><td>95% <i>t</i>-interval across folds — optimistic, since folds share training data</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="note">
+  Intervals describe the spread of fold scores, not true generalisation error.
+  The significance test, which corrects for the overlap between training folds,
+  is what the verdict relies on.
+</p>
+
+<footer>
+  michi 0.3.0 ·
+  2.5s ·
+  seed 0
+</footer>
+
+</div>
+</body>
+</html>

@@ -15,6 +15,7 @@ Design Principles
 from __future__ import annotations
 
 import datetime as _dt
+from typing import TYPE_CHECKING
 
 from rich import box
 from rich.console import Console, Group, RenderableType
@@ -31,8 +32,18 @@ from michi.core.artifacts import (
 )
 from michi.core.manifest import RunManifest
 from michi.explain import explanation_for
+from michi.report.runs import RunGroup
 
-__all__ = ["render_evaluation", "render_profile", "severity_style"]
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from michi.bench import BenchResult
+
+__all__ = [
+    "render_benchmark",
+    "render_evaluation",
+    "render_profile",
+    "render_runs_terminal",
+    "severity_style",
+]
 
 _KIND_STYLE = {
     ColumnKind.NUMERIC: "cyan",
@@ -500,3 +511,244 @@ def _slices_table(manifest: RunManifest) -> RenderableType | None:
             Text(_number(float(item["score"])), style="dim"),
         )
     return Group(heading, Text(), table)
+
+
+def render_benchmark(
+    result: BenchResult,
+    console: Console,
+    *,
+    explain: bool = False,
+) -> None:
+    """Render a benchmark comparison to the terminal.
+
+    Parameters
+    ----------
+    result
+        The benchmark outcome to render.
+    console
+        Destination console.
+    explain
+        Also print what each check means and which options exist.
+    """
+    console.print()
+    console.print(_bench_header(result))
+    console.print()
+    console.print(Padding(_bench_summary(result), (0, 0, 1, 2)))
+    console.print(Padding(_leaderboard(result), (0, 0, 1, 2)))
+    console.print(Padding(_verdict(result), (0, 0, 1, 2)))
+
+    if result.checks:
+        console.print(Padding(_findings_table(result.checks), (0, 0, 1, 2)))
+        if explain:
+            console.print(Padding(_explanations(result.checks), (0, 0, 1, 2)))
+
+
+def _bench_header(result: BenchResult) -> RenderableType:
+    text = Text()
+    text.append(" 道 ", style="bold red")
+    text.append(" michi bench", style="bold")
+    text.append("  ·  ", style="dim")
+    text.append(f"{len(result.results)} models", style="bold cyan")
+    return text
+
+
+def _bench_summary(result: BenchResult) -> RenderableType:
+    from michi.bench import describe_policy
+
+    line = Text()
+    line.append(result.task, style="bold")
+    line.append("  ·  ", style="dim")
+    line.append(f"{result.n_rows:,} rows", style="bold")
+    line.append("  ·  ", style="dim")
+    line.append(f"{result.folds}-fold cross-validation")
+    line.append("  ·  ", style="dim")
+    line.append("target ", style="dim")
+    line.append(result.target, style="bold green")
+
+    preparation = Text(style="dim")
+    preparation.append("preparation: " + describe_policy(result.policy, scaled=True))
+
+    timing = Text(style="dim")
+    timing.append(f"seed {result.seed}  ·  {result.duration_s:.1f}s")
+    return Group(line, preparation, timing)
+
+
+def _leaderboard(result: BenchResult) -> RenderableType:
+    heading = Text()
+    heading.append("Results", style="bold")
+    heading.append(f"  (ranked by {result.primary_metric})", style="dim")
+
+    verdicts = {item.model: item for item in result.comparisons}
+
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        header_style="bold dim",
+        pad_edge=False,
+        show_edge=False,
+    )
+    table.add_column("model", no_wrap=True)
+    table.add_column(result.primary_metric, justify="right", no_wrap=True)
+    table.add_column("95% interval", justify="right", no_wrap=True)
+    table.add_column("vs leader", overflow="fold")
+    table.add_column("fit", justify="right", no_wrap=True)
+
+    for index, item in enumerate(result.results):
+        if item.failed is not None:
+            table.add_row(
+                Text(item.name, style="dim"),
+                Text("failed", style="red"),
+                Text("—", style="dim"),
+                Text(item.failed, style="dim"),
+                Text("—", style="dim"),
+            )
+            continue
+
+        metric = item.primary
+        interval = (
+            f"{metric.ci_low:.4g} – {metric.ci_high:.4g}"
+            if metric.has_interval
+            else "—"
+        )
+        comparison = verdicts.get(item.name)
+        if comparison is None:
+            verdict_text = Text("—", style="dim")
+        elif comparison.model == comparison.leader:
+            verdict_text = Text("leader", style="bold green")
+        elif comparison.significant:
+            verdict_text = Text(f"worse (p={comparison.adjusted_p:.3g})", style="dim")
+        else:
+            verdict_text = Text(
+                f"tied with leader (p={comparison.adjusted_p:.3g})", style="yellow"
+            )
+
+        emphasis = "bold" if index == 0 else ""
+        table.add_row(
+            Text(item.name, style=emphasis),
+            Text(_number(metric.value), style=emphasis),
+            Text(interval, style="dim"),
+            verdict_text,
+            Text(f"{item.fit_seconds:.1f}s", style="dim"),
+        )
+    return Group(heading, Text(), table)
+
+
+def _verdict(result: BenchResult) -> RenderableType:
+    """State in plain language what the comparison does and does not show."""
+    leader = result.leader
+    if leader is None:
+        return Text("No model could be trained.", style="red")
+
+    tied = [
+        comparison
+        for comparison in result.comparisons
+        if comparison.model != comparison.leader and not comparison.significant
+    ]
+    text = Text()
+    text.append("Verdict  ", style="bold")
+    if not tied:
+        text.append(
+            f"{leader.name} scores highest, and the difference from every "
+            f"other model is statistically significant."
+        )
+    else:
+        names = ", ".join(comparison.model for comparison in tied)
+        text.append(
+            f"{leader.name} scores highest, but {names} "
+            f"{'is' if len(tied) == 1 else 'are'} statistically "
+            f"indistinguishable from it at this sample size. "
+        )
+        text.append(
+            "Choosing between them on these numbers alone is not supported.",
+            style="dim",
+        )
+    return text
+
+
+def render_runs_terminal(groups: tuple[RunGroup, ...], console: Console) -> None:
+    """Render recorded runs to the terminal, grouped by dataset and target.
+
+    Parameters
+    ----------
+    groups
+        Comparable run groups, as produced by
+        :func:`michi.report.runs.group_runs`.
+    console
+        Destination console.
+    """
+    total = sum(len(group.manifests) for group in groups)
+    console.print()
+    header = Text()
+    header.append(" 道 ", style="bold red")
+    header.append(" michi report", style="bold")
+    header.append("  ·  ", style="dim")
+    header.append(f"{total} runs", style="bold cyan")
+    console.print(header)
+    console.print()
+
+    for group in groups:
+        title = Text()
+        title.append(group.dataset, style="bold")
+        title.append("  ·  target ", style="dim")
+        title.append(group.target, style="bold green")
+        title.append(f"  ·  {group.task}", style="dim")
+        console.print(Padding(title, (0, 0, 0, 2)))
+
+        table = Table(
+            box=box.SIMPLE_HEAD,
+            header_style="bold dim",
+            pad_edge=False,
+            show_edge=False,
+        )
+        table.add_column("run", no_wrap=True)
+        table.add_column("model", no_wrap=True)
+        table.add_column(
+            group.primary_metric or "metric", justify="right", no_wrap=True
+        )
+        table.add_column("95% interval", justify="right", no_wrap=True)
+        table.add_column("verdict", overflow="fold")
+
+        for manifest in group.ranked():
+            metric = manifest.primary if manifest.metrics else None
+            interval = (
+                f"{metric.ci_low:.4g} – {metric.ci_high:.4g}"
+                if metric is not None and metric.has_interval
+                else "—"
+            )
+            verdict = _run_verdict(manifest)
+            table.add_row(
+                Text(short_run_id(manifest.run_id), style="dim"),
+                Text(manifest.model.class_name),
+                Text(_number(metric.value) if metric else "—"),
+                Text(interval, style="dim"),
+                verdict,
+            )
+        console.print(Padding(table, (0, 0, 1, 2)))
+
+
+def short_run_id(run_id: str) -> str:
+    """The distinguishing part of a run id, for dense tables.
+
+    Run ids are ``<timestamp>-<token>`` with an optional ``-<model>`` suffix.
+    The token alone identifies the run, and the model is already its own
+    column, so neither needs repeating.
+
+    Examples
+    --------
+    >>> short_run_id("20260101T000000Z-2f0eeed3-rf")
+    '2f0eeed3'
+    """
+    parts = run_id.split("-")
+    return parts[1] if len(parts) > 1 else run_id[:8]
+
+
+def _run_verdict(manifest: RunManifest) -> Text:
+    """Render whatever comparison verdict a manifest recorded."""
+    comparison = manifest.details.get("comparison")
+    if not isinstance(comparison, dict):
+        return Text("—", style="dim")
+    if comparison.get("model") == comparison.get("leader"):
+        return Text("leader", style="bold green")
+    adjusted = float(comparison.get("adjusted_p", 1.0))
+    if comparison.get("significant"):
+        return Text(f"worse (p={adjusted:.3g})", style="dim")
+    return Text(f"tied with leader (p={adjusted:.3g})", style="yellow")

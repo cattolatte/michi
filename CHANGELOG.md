@@ -6,6 +6,40 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-26
+
+Honest model comparison: `michi bench` and `michi report`. This completes the
+MVP — inspect, evaluate, compare, report.
+
+### Added
+- **`michi bench`** — cross-validates several models and reports which of them
+  are actually distinguishable. A dummy baseline is always added; differences
+  from the leader are tested with the **corrected resampled *t*-test**
+  (Nadeau & Bengio, 2003) and Holm-adjusted across models, and the conclusion
+  is stated in plain language ("tied with leader at this sample size").
+- **A model catalogue** (`--list-models`) of 14 algorithms: `dummy`, `linear`,
+  `ridge`, `lasso`, `tree`, `rf`, `extra-trees`, `hist-gbm`, `knn`, `svm`,
+  `naive-bayes` in the base install, plus `xgb`, `lgbm`, `catboost` behind the
+  `bench` extra. Everything trains locally; nothing is downloaded.
+- **Stated column preparation**, printed every run and recorded in every
+  manifest, and fitted *inside each fold* so a benchmark cannot leak.
+  Overridable with `--impute`, `--encode`, `--no-scale`.
+- **`michi report`** — renders recorded runs as a self-contained offline HTML
+  page, Markdown for a pull request, or a paste-ready booktabs LaTeX table for
+  a paper. Runs are grouped by dataset content hash and target, so
+  incomparable numbers are never put in one table.
+- Benchmark checks: `below-baseline`, `no-clear-winner`, `model-failed`.
+- Documentation for `bench` and `report`.
+
+### Changed
+- Unknown or task-incompatible model names now fail immediately, before any
+  training, rather than appearing as a failed row in the leaderboard.
+
+### Fixed
+- The corrected *t*-test returned "not significant" when two models differed
+  by exactly the same amount on every fold. A zero-variance difference is the
+  strongest possible evidence, not the weakest; the limit is now p = 0.
+
 ## [0.2.0] — 2026-07-26
 
 Evaluate models michi never saw trained: `michi eval`.

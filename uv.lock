@@ -1010,7 +1010,7 @@ wheels = [
 
 [[package]]
 name = "michi"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
@@ -1020,6 +1020,8 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
     { name = "scikit-learn" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "typer" },
 ]
 
@@ -1073,6 +1075,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.7" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
     { name = "scikit-learn", specifier = ">=1.4" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "shap", marker = "extra == 'shap'", specifier = ">=0.45" },
     { name = "syrupy", marker = "extra == 'dev'", specifier = ">=4.6" },
     { name = "typer", specifier = ">=0.12" },

@@ -62,11 +62,11 @@ Every verb stands alone. Use one, ignore the rest.
 |---|---|:---:|
 | `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers, leakage suspects — every finding explained | **v0.1** |
 | `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, subgroup gaps | **v0.2** |
-| `michi bench … --models rf,logreg,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | v0.3 |
+| `michi bench … --models rf,linear,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | **v0.3** |
 | `michi clean` · `apply` · `export` | Interactive cleaning that authors a reproducible recipe and exports readable pipeline code | v0.4 |
 | `michi` | Interactive console with context-aware completion; every session exports to a replayable script | v0.5 |
 | `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds | v0.6 |
-| `michi report runs/` | HTML · Markdown · LaTeX reports over recorded runs | v0.3 |
+| `michi report runs/` | HTML · Markdown · LaTeX reports over recorded runs | **v0.3** |
 | `michi ui` | Local, read-only viewer over your runs | v0.7 |
 
 <br>
@@ -113,7 +113,40 @@ michi inspect data/customers.csv --target purchased
 [machine-readable profile](examples/profile.json) you can diff in CI, and
 `--fail-on high` turns michi into a data-quality gate.
 
-Full options: [`michi inspect`](docs/inspect.md) · [`michi eval`](docs/eval.md).
+Then compare some models — and find out whether the difference is real:
+
+```bash
+michi bench data/customers.csv --target purchased --models linear,rf,hist-gbm
+```
+
+```
+ 道  michi bench  ·  5 models
+
+  classification  ·  490 rows  ·  5-fold cross-validation  ·  target purchased
+  preparation: numeric: impute median · categorical: impute most_frequent +
+  onehot · standardise (scale-sensitive models only) — fitted inside each fold
+
+  Results  (ranked by balanced_accuracy)
+
+  model      balanced_accuracy      95% interval   vs leader                fit
+  ────────────────────────────────────────────────────────────────────────────
+  linear                 0.708   0.6278 – 0.7888   leader                  0.1s
+  hist-gbm               0.696   0.6058 – 0.7853   tied with leader (p=1)  0.4s
+  rf                     0.694   0.6157 – 0.7723   tied with leader (p=1)  0.9s
+  dummy                    0.5         0.5 – 0.5   worse (p=0.0261)        0.0s
+
+  Verdict  linear scores highest, but hist-gbm, rf are statistically
+  indistinguishable from it at this sample size. Choosing between them on
+  these numbers alone is not supported.
+```
+
+Most tools would have declared `linear` the winner. Differences are tested
+with the corrected resampled *t*-test (Nadeau & Bengio, 2003), because
+cross-validation folds share training data and a naive test calls noise
+significant.
+
+Full options: [`michi inspect`](docs/inspect.md) · [`michi eval`](docs/eval.md) ·
+[`michi bench`](docs/bench.md) · [`michi report`](docs/report.md).
 
 <br>
 

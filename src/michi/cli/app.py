@@ -22,8 +22,10 @@ import typer
 from rich.console import Console
 
 from michi import __version__
+from michi.cli.bench_cmd import bench_command
 from michi.cli.eval_cmd import eval_command
 from michi.cli.inspect_cmd import inspect_command
+from michi.cli.report_cmd import report_command
 
 app = typer.Typer(
     name="michi",
@@ -37,6 +39,8 @@ _console = Console()
 
 app.command("inspect")(inspect_command)
 app.command("eval")(eval_command)
+app.command("bench")(bench_command)
+app.command("report")(report_command)
 
 
 def _print_version(value: bool) -> None:

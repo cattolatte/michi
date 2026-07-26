@@ -1,0 +1,382 @@
+"""The catalogue of models ``michi bench`` can train.
+
+Design Principles
+-----------------
+- **A menu, not a recommendation.** michi lists what is available with a
+  one-line description of each; which to try is the user's choice. Nothing is
+  selected automatically and no model is called "best".
+- **Nothing downloads.** Every entry is an algorithm that trains locally on
+  the user's data in seconds. michi makes no network calls, ever.
+- **Heavy libraries stay optional.** Gradient-boosting packages live behind
+  the ``bench`` extra and are imported only when actually requested, with an
+  error naming the exact install command when they are missing.
+- Entries are data, not classes: adding a model is one table entry, not a
+  subclass.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, Final
+
+from michi.core.errors import RunError
+
+__all__ = ["ModelEntry", "available_models", "build_model", "model_entry"]
+
+
+@dataclass(frozen=True, slots=True)
+class ModelEntry:
+    """One entry in the model catalogue.
+
+    Attributes
+    ----------
+    name
+        Short identifier used on the command line.
+    tasks
+        Which tasks the model supports.
+    summary
+        One factual line about the model's behaviour — never a judgement of
+        quality.
+    extra
+        The michi extra that must be installed, if any.
+    needs_scaling
+        Whether the model is sensitive to feature scale, which decides
+        whether the default preprocessing standardises numeric columns.
+    """
+
+    name: str
+    tasks: frozenset[str]
+    summary: str
+    factory: Callable[[str, int], Any]
+    extra: str | None = None
+    needs_scaling: bool = False
+
+    def supports(self, task: str) -> bool:
+        """Whether this entry can be trained for the given task."""
+        return task in self.tasks
+
+
+_BOTH: Final = frozenset({"classification", "regression"})
+_CLASSIFICATION: Final = frozenset({"classification"})
+_REGRESSION: Final = frozenset({"regression"})
+
+
+def _linear(task: str, seed: int) -> Any:
+    from sklearn.linear_model import LinearRegression, LogisticRegression
+
+    if task == "classification":
+        return LogisticRegression(max_iter=1000, random_state=seed)
+    return LinearRegression()
+
+
+def _ridge(task: str, seed: int) -> Any:
+    from sklearn.linear_model import Ridge, RidgeClassifier
+
+    return (
+        RidgeClassifier(random_state=seed)
+        if task == "classification"
+        else Ridge(random_state=seed)
+    )
+
+
+def _lasso(task: str, seed: int) -> Any:
+    from sklearn.linear_model import Lasso
+
+    return Lasso(random_state=seed)
+
+
+def _random_forest(task: str, seed: int) -> Any:
+    from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+    kwargs = {"n_estimators": 300, "random_state": seed, "n_jobs": -1}
+    return (
+        RandomForestClassifier(**kwargs)
+        if task == "classification"
+        else RandomForestRegressor(**kwargs)
+    )
+
+
+def _extra_trees(task: str, seed: int) -> Any:
+    from sklearn.ensemble import ExtraTreesClassifier, ExtraTreesRegressor
+
+    kwargs = {"n_estimators": 300, "random_state": seed, "n_jobs": -1}
+    return (
+        ExtraTreesClassifier(**kwargs)
+        if task == "classification"
+        else ExtraTreesRegressor(**kwargs)
+    )
+
+
+def _hist_gbm(task: str, seed: int) -> Any:
+    from sklearn.ensemble import (
+        HistGradientBoostingClassifier,
+        HistGradientBoostingRegressor,
+    )
+
+    return (
+        HistGradientBoostingClassifier(random_state=seed)
+        if task == "classification"
+        else HistGradientBoostingRegressor(random_state=seed)
+    )
+
+
+def _decision_tree(task: str, seed: int) -> Any:
+    from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
+    return (
+        DecisionTreeClassifier(random_state=seed)
+        if task == "classification"
+        else DecisionTreeRegressor(random_state=seed)
+    )
+
+
+def _knn(task: str, seed: int) -> Any:
+    from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+
+    if task == "classification":
+        return KNeighborsClassifier()
+    return KNeighborsRegressor()
+
+
+def _svm(task: str, seed: int) -> Any:
+    from sklearn.svm import SVC, SVR
+
+    if task == "classification":
+        return SVC(probability=True, random_state=seed)
+    return SVR()
+
+
+def _naive_bayes(task: str, seed: int) -> Any:
+    from sklearn.naive_bayes import GaussianNB
+
+    return GaussianNB()
+
+
+def _dummy(task: str, seed: int) -> Any:
+    from sklearn.dummy import DummyClassifier, DummyRegressor
+
+    return (
+        DummyClassifier(strategy="most_frequent")
+        if task == "classification"
+        else DummyRegressor(strategy="mean")
+    )
+
+
+def _xgboost(task: str, seed: int) -> Any:
+    try:
+        from xgboost import XGBClassifier, XGBRegressor
+    except ImportError as err:
+        raise _missing_extra("xgboost", "bench") from err
+
+    kwargs = {"random_state": seed, "n_jobs": -1, "verbosity": 0}
+    if task == "classification":
+        return XGBClassifier(**kwargs)
+    return XGBRegressor(**kwargs)
+
+
+def _lightgbm(task: str, seed: int) -> Any:
+    try:
+        from lightgbm import LGBMClassifier, LGBMRegressor
+    except ImportError as err:
+        raise _missing_extra("lightgbm", "bench") from err
+
+    kwargs = {"random_state": seed, "n_jobs": -1, "verbose": -1}
+    if task == "classification":
+        return LGBMClassifier(**kwargs)
+    return LGBMRegressor(**kwargs)
+
+
+def _catboost(task: str, seed: int) -> Any:
+    try:
+        from catboost import CatBoostClassifier, CatBoostRegressor
+    except ImportError as err:
+        raise _missing_extra("catboost", "bench") from err
+
+    kwargs = {"random_seed": seed, "verbose": False, "allow_writing_files": False}
+    return (
+        CatBoostClassifier(**kwargs)
+        if task == "classification"
+        else CatBoostRegressor(**kwargs)
+    )
+
+
+def _missing_extra(package: str, extra: str) -> RunError:
+    return RunError(
+        f"{package} is not installed. Install it with: pip install 'michi[{extra}]'"
+    )
+
+
+_REGISTRY: Final[tuple[ModelEntry, ...]] = (
+    ModelEntry(
+        name="dummy",
+        tasks=_BOTH,
+        summary=(
+            "predicts the most frequent class or the mean; "
+            "the floor any model must clear"
+        ),
+        factory=_dummy,
+    ),
+    ModelEntry(
+        name="linear",
+        tasks=_BOTH,
+        summary=(
+            "logistic or ordinary least squares regression; fast, and its "
+            "coefficients read directly"
+        ),
+        factory=_linear,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="ridge",
+        tasks=_BOTH,
+        summary=(
+            "linear model with L2 penalty; steadier than plain linear when "
+            "features are correlated"
+        ),
+        factory=_ridge,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="lasso",
+        tasks=_REGRESSION,
+        summary=(
+            "linear regression with L1 penalty; drives some coefficients to "
+            "exactly zero"
+        ),
+        factory=_lasso,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="tree",
+        tasks=_BOTH,
+        summary=(
+            "a single decision tree; readable end to end, and prone to "
+            "overfitting alone"
+        ),
+        factory=_decision_tree,
+    ),
+    ModelEntry(
+        name="rf",
+        tasks=_BOTH,
+        summary=("random forest of 300 trees; a common starting point on tabular data"),
+        factory=_random_forest,
+    ),
+    ModelEntry(
+        name="extra-trees",
+        tasks=_BOTH,
+        summary=(
+            "randomised forest variant; splits at random thresholds, trains "
+            "faster than rf"
+        ),
+        factory=_extra_trees,
+    ),
+    ModelEntry(
+        name="hist-gbm",
+        tasks=_BOTH,
+        summary=(
+            "histogram gradient boosting from sklearn; handles missing values "
+            "natively, no extra needed"
+        ),
+        factory=_hist_gbm,
+    ),
+    ModelEntry(
+        name="knn",
+        tasks=_BOTH,
+        summary=(
+            "k-nearest neighbours; no training step, prediction cost grows "
+            "with the data"
+        ),
+        factory=_knn,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="svm",
+        tasks=_BOTH,
+        summary=(
+            "support vector machine with an RBF kernel; scales poorly beyond "
+            "tens of thousands of rows"
+        ),
+        factory=_svm,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="naive-bayes",
+        tasks=_CLASSIFICATION,
+        summary=(
+            "Gaussian naive Bayes; assumes independent features, trains "
+            "almost instantly"
+        ),
+        factory=_naive_bayes,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="xgb",
+        tasks=_BOTH,
+        summary="XGBoost gradient boosting",
+        factory=_xgboost,
+        extra="bench",
+    ),
+    ModelEntry(
+        name="lgbm",
+        tasks=_BOTH,
+        summary=("LightGBM gradient boosting; leaf-wise growth, fast on wide data"),
+        factory=_lightgbm,
+        extra="bench",
+    ),
+    ModelEntry(
+        name="catboost",
+        tasks=_BOTH,
+        summary=(
+            "CatBoost gradient boosting; ordered boosting, strong categorical handling"
+        ),
+        factory=_catboost,
+        extra="bench",
+    ),
+)
+
+
+def available_models(task: str | None = None) -> tuple[ModelEntry, ...]:
+    """List the catalogue, optionally narrowed to one task.
+
+    Examples
+    --------
+    >>> names = [entry.name for entry in available_models("regression")]
+    >>> "lasso" in names and "naive-bayes" not in names
+    True
+    """
+    if task is None:
+        return _REGISTRY
+    return tuple(entry for entry in _REGISTRY if entry.supports(task))
+
+
+def model_entry(name: str) -> ModelEntry:
+    """Look up one catalogue entry by name.
+
+    Raises
+    ------
+    RunError
+        If no such model exists, listing what does.
+    """
+    for entry in _REGISTRY:
+        if entry.name == name:
+            return entry
+    known = ", ".join(item.name for item in _REGISTRY)
+    msg = f"unknown model {name!r}. Available models: {known}"
+    raise RunError(msg)
+
+
+def build_model(name: str, task: str, seed: int) -> Any:
+    """Instantiate a catalogue model for a task.
+
+    Raises
+    ------
+    RunError
+        If the model does not support the task, or its extra is missing.
+    """
+    entry = model_entry(name)
+    if not entry.supports(task):
+        supported = ", ".join(sorted(entry.tasks))
+        msg = f"{name!r} does not support {task}; it supports: {supported}"
+        raise RunError(msg)
+    return entry.factory(task, seed)
