@@ -9,4 +9,4 @@ verdicts ("B beats A, but not significantly"). Built on `michi.evaluation`'s
 public surface; heavy libraries (XGBoost, LightGBM, CatBoost) live behind the
 `[bench]` extra.
 
-See PLAN.md §11 and §15 (v0.3).
+See the project roadmap in the documentation.

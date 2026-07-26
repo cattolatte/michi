@@ -8,5 +8,5 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Project skeleton: packaging, CI, module layout, error hierarchy, CLI entry
-  point (`michi --version`, `michi info`), planning documents (`PLAN.md`,
-  ADR-0001).
+  point (`michi --version`, `michi info`), philosophy and roadmap
+  documentation, ADR-0001.

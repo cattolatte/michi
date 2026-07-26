@@ -8,4 +8,4 @@ operations plus a schema snapshot) and its three verbs: `michi clean`
 (non-destructive execution with schema validation), and `michi export`
 (compilation to a readable sklearn `Pipeline` script the user owns).
 
-See PLAN.md §8, §9, and §15 (v0.4).
+See the project roadmap in the documentation.

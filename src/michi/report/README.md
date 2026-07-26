@@ -4,6 +4,6 @@
 
 Renderers over profiles and run manifests: terminal (rich), self-contained
 offline HTML (jinja2 + embedded plotly), Markdown, and LaTeX tables for
-papers. Reports are static files — no server involved (PLAN.md §10).
+papers. Reports are static files — no server involved (see the philosophy page).
 
-See PLAN.md §8, §10, and §15 (v0.3).
+See the project roadmap in the documentation.

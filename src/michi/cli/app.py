@@ -6,8 +6,8 @@ Design Principles
   renders results. No domain logic lives here.
 - Every capability is reachable non-interactively; interactive flows are
   sugar over flags, never the only path.
-- Bare ``michi`` will become the interactive console in v0.5 (PLAN.md §9);
-  until then it shows help.
+- Bare ``michi`` will become the interactive console in v0.5; until then it
+  shows help.
 """
 
 from __future__ import annotations

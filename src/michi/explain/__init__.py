@@ -1,6 +1,6 @@
 """Explanations attached to findings.
 
-Planned: v0.1 alongside ``michi inspect`` (see PLAN.md §15). Not implemented
+Planned: v0.1 alongside ``michi inspect`` (see the roadmap). Not implemented
 yet; this stub is intentional.
 """
 

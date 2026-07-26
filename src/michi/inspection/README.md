@@ -9,4 +9,4 @@ explanations attached to findings. Produces the **profile** artifact (JSON)
 plus terminal and HTML renderings.
 
 Named `inspection` rather than `inspect` to avoid shadowing the stdlib module;
-the CLI verb is still `michi inspect`. See PLAN.md §9 and §15 (v0.1).
+the CLI verb is still `michi inspect`. See the project roadmap in the documentation.

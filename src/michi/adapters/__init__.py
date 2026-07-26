@@ -1,6 +1,6 @@
 """Model loading adapters.
 
-Planned: v0.2 alongside ``michi eval`` (see PLAN.md §11 and §15). Not
+Planned: v0.2 alongside ``michi eval`` (see the roadmap). Not
 implemented yet; this stub is intentional.
 """
 

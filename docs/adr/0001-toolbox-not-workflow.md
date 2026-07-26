@@ -35,6 +35,6 @@ code.
 - Reproducibility is structural (any run re-executes from its artifacts).
 - Some conveniences are deliberately forgone: no cross-command in-memory
   caching, no "current project" magic beyond the explicit `michi.toml`
-  defaults file (PLAN.md §12).
+  defaults file (see the philosophy page).
 - Features that require owning the workflow (AutoML, serving, monitoring,
-  DAGs) are permanently out of scope (PLAN.md §7).
+  DAGs) are permanently out of scope (see the philosophy page).

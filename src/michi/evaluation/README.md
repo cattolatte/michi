@@ -8,4 +8,4 @@ per-slice metrics, an always-included dummy baseline, leakage checks, and
 `--fail-under` CI gates. Writes the **run manifest** artifact.
 
 Named `evaluation` rather than `eval` to avoid shadowing the built-in; the
-CLI verb is still `michi eval`. See PLAN.md §11 and §15 (v0.2).
+CLI verb is still `michi eval`. See the project roadmap in the documentation.

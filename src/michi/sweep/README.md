@@ -7,4 +7,4 @@ the `michi sweep` verb: sequential or joblib-parallel execution, content-hash
 caching, resume after interrupt, one run manifest per cell. Built on
 `michi.bench`'s public surface.
 
-See PLAN.md §15 (v0.6).
+See the project roadmap in the documentation.

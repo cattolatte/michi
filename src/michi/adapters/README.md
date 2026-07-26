@@ -2,7 +2,7 @@
 
 **Planned — v0.2 (with `eval`). Not implemented yet; this stub is intentional.**
 
-Model loading behind a deliberately narrow policy (PLAN.md §11, LOCKED):
+Model loading behind a deliberately narrow policy (see the philosophy page):
 
 1. sklearn-compatible estimators via pickle/joblib;
 2. everything else via the `--model mymodule:obj` protocol — any object with

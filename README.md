@@ -87,8 +87,9 @@ profile.json` for a machine-readable profile you can diff in CI.
 - **Rigor by default** — baselines, confidence intervals, significance tests, leakage checks: opt-out, not opt-in.
 - **Local-first** — no server, no accounts, no telemetry, no network calls. Ever.
 
-Read [PLAN.md](PLAN.md) for the full architecture, roadmap, and the list of
-things michi will deliberately never do.
+Read [the philosophy](docs/philosophy.md) for the full reasoning and the list
+of things michi will deliberately never do, and [the roadmap](docs/roadmap.md)
+for what ships when.
 
 ## Development
 

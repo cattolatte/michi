@@ -6,7 +6,25 @@ judgement call to you.
 
 **Automate implementation. Never automate judgement.**
 
-The documentation site grows with the milestones (Diátaxis structure:
-quickstart, how-to guides, reference, explanations). Until then, see
-[PLAN.md](https://github.com/cattolatte/michi/blob/main/PLAN.md) for the full
-vision, architecture, and roadmap.
+## Start here
+
+- [Philosophy](philosophy.md) — the principles every decision follows, and the
+  permanent non-goals.
+- [Roadmap](roadmap.md) — which verb ships when, and the artifacts they produce.
+- [Architecture decisions](adr/README.md) — why the big calls were made.
+
+## Install
+
+```bash
+pip install michi
+```
+
+## First command
+
+```bash
+michi inspect data.csv --target label
+```
+
+Profiles the dataset, explains every finding, and writes nothing you did not
+ask for. Add `--html profile.html` for a self-contained offline report, or
+`--json profile.json` for a machine-readable artifact you can diff in CI.

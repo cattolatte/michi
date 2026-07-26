@@ -9,4 +9,4 @@ experts, linked to the docs' explanation pages.
 
 Explanation text is **content, not code**: it lives in structured files under
 `content/` and is reviewed like documentation, so accuracy fixes never touch
-logic. See PLAN.md §19 and §22 (risk 6).
+logic. See the project roadmap in the documentation.

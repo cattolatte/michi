@@ -18,3 +18,5 @@ theme:
 
 nav:
   - Home: index.md
+  - Philosophy: philosophy.md
+  - Roadmap: roadmap.md

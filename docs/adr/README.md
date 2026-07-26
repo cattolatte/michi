@@ -1,8 +1,8 @@
 # Architecture Decision Records
 
 Major architectural decisions are recorded here before or as they are made.
-Silent architectural decisions are not allowed. Reopening a decision marked
-**LOCKED** in PLAN.md requires a new ADR explaining what changed.
+Silent architectural decisions are not allowed. Reopening a decision recorded
+as accepted requires a new ADR explaining what changed.
 
 Format: one markdown file per decision, numbered, with Status / Context /
 Decision / Consequences sections.

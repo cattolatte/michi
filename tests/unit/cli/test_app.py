@@ -31,6 +31,6 @@ def test_info_reports_environment() -> None:
 
 
 def test_bare_invocation_shows_help() -> None:
-    """Bare `michi` shows help until the console ships (PLAN.md §15, v0.5)."""
+    """Bare `michi` shows help until the interactive console ships in v0.5."""
     result = runner.invoke(app, [])
     assert "Usage" in result.output
