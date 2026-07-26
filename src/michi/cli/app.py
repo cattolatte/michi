@@ -32,7 +32,7 @@ app = typer.Typer(
     name="michi",
     help="Michi (道) — a local-first ML workbench. "
     "Automate implementation, never judgement.",
-    no_args_is_help=True,
+    invoke_without_command=True,
     add_completion=False,
     rich_markup_mode="rich",
 )
@@ -55,6 +55,7 @@ def _print_version(value: bool) -> None:
 
 @app.callback()
 def main(
+    context: typer.Context,
     version: Annotated[
         bool,
         typer.Option(
@@ -65,15 +66,49 @@ def main(
         ),
     ] = False,
 ) -> None:
-    """Michi (道) — the path through repetitive ML work."""
+    """Michi (道) — the path through repetitive ML work.
+
+    Run with no arguments to open the interactive console.
+    """
+    if context.invoked_subcommand is not None:
+        return
+
+    # Bare `michi` opens the console when a terminal is attached, and prints
+    # help otherwise, so piping or scripting `michi` never hangs on a prompt.
+    if not _console.is_terminal:
+        _console.print(context.get_help())
+        raise typer.Exit()
+
+    from michi.console import run_console
+
+    raise typer.Exit(code=run_console())
 
 
 @app.command()
 def info() -> None:
     """Show version and environment information."""
+    from michi.core.config import find_config, load_defaults
     from michi.core.io import supported_formats
 
     _console.print(f"michi     {__version__}")
     _console.print(f"python    {sys.version.split()[0]}")
     _console.print(f"platform  {platform.platform()}")
     _console.print(f"formats   {', '.join(supported_formats())}")
+
+    config = find_config()
+    if config is None:
+        _console.print("config    [dim]none (no michi.toml found)[/]")
+        return
+    _console.print(f"config    {config}")
+    defaults = load_defaults()
+    for key, value in (
+        ("data", defaults.data),
+        ("target", defaults.target),
+        ("recipe", defaults.recipe),
+        ("runs_dir", defaults.runs_dir),
+        ("models", defaults.models),
+        ("seed", defaults.seed),
+        ("cv", defaults.cv),
+    ):
+        if value is not None:
+            _console.print(f"  [dim]{key}[/] = {value}")

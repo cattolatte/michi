@@ -1010,12 +1010,13 @@ wheels = [
 
 [[package]]
 name = "michi"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
     { name = "pandas" },
     { name = "plotly" },
+    { name = "prompt-toolkit" },
     { name = "pyarrow" },
     { name = "pyyaml" },
     { name = "questionary" },
@@ -1070,6 +1071,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.1" },
     { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.1" },
     { name = "plotly", specifier = ">=5.20" },
+    { name = "prompt-toolkit", specifier = ">=3.0" },
     { name = "pyarrow", specifier = ">=15.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
     { name = "pyyaml", specifier = ">=6.0" },

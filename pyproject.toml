@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "michi"
-version = "0.4.0"
+version = "0.5.0"
 description = "A local-first ML workbench: independent CLI tools that automate the repetitive implementation work of machine learning — never the judgement."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -43,6 +43,7 @@ dependencies = [
   "plotly>=5.20",
   "scipy>=1.11",
   "questionary>=2.0",
+  "prompt_toolkit>=3.0",
 ]
 
 [project.optional-dependencies]
@@ -79,7 +80,7 @@ src = ["src", "tests"]
 # michi's terminal and HTML output is typographic on purpose: en dashes for
 # numeric ranges, arrows for date ranges, middots as separators. These are
 # deliberate output characters, not homoglyph mistakes.
-allowed-confusables = ["–", "—", "→", "·", "×", "≈", "±"]
+allowed-confusables = ["–", "—", "→", "·", "×", "≈", "±", "›", "╲"]
 select = [
   "E",   # pycodestyle errors
   "W",   # pycodestyle warnings

@@ -6,6 +6,36 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-27
+
+The console: `michi` with no arguments.
+
+### Added
+- **An interactive console** with the context always visible in the prompt
+  (`michi (train.csv → churned) ›`), `help`, `use`, `set`, `unset`, and
+  `show [context|columns|models|runs]`.
+- **Tab completion over your own data** — once a dataset is loaded, `set
+  target <TAB>` completes that file's column names. This is the one thing a
+  one-shot CLI can never do, and the reason the console exists.
+- **`history --export`** writes the session as a replayable shell script of
+  fully-expanded one-shot commands. Console-only commands never appear, so
+  exploration stays reproducible.
+- **`michi.toml`** — optional project defaults, found by searching upward from
+  the working directory. Precedence is flags > `michi.toml` > built-in, and
+  `michi info` prints which file was found and what it supplies. This is
+  michi's answer to session state: if it is remembered, it is a file you can
+  read, edit, diff, and commit.
+- The console's context *is* the `michi.toml` model, so `save` persists it and
+  a later session restores it.
+
+### Notes
+- The console contains **zero logic**: every verb dispatches to the same Typer
+  application the shell invokes, and a test asserts no console verb exists
+  outside the CLI. Deleting the console would remove convenience, never
+  capability.
+- Bare `michi` prints help rather than opening a prompt when stdout is not a
+  terminal, so scripts never hang.
+
 ## [0.4.0] — 2026-07-26
 
 Cleaning decisions as a file you own: `michi clean`, `apply`, and `export`.
