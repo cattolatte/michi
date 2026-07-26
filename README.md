@@ -61,7 +61,7 @@ Every verb stands alone. Use one, ignore the rest.
 | Verb | What it does | Status |
 |---|---|:---:|
 | `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers, leakage suspects — every finding explained | **v0.1** |
-| `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, leakage checks | v0.2 |
+| `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, subgroup gaps | **v0.2** |
 | `michi bench … --models rf,logreg,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | v0.3 |
 | `michi clean` · `apply` · `export` | Interactive cleaning that authors a reproducible recipe and exports readable pipeline code | v0.4 |
 | `michi` | Interactive console with context-aware completion; every session exports to a replayable script | v0.5 |
@@ -113,7 +113,7 @@ michi inspect data/customers.csv --target purchased
 [machine-readable profile](examples/profile.json) you can diff in CI, and
 `--fail-on high` turns michi into a data-quality gate.
 
-Full options: [`michi inspect`](docs/inspect.md).
+Full options: [`michi inspect`](docs/inspect.md) · [`michi eval`](docs/eval.md).
 
 <br>
 

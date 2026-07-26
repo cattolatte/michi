@@ -1,9 +1,17 @@
 """Model loading adapters.
 
-Planned: v0.2 alongside ``michi eval`` (see the roadmap). Not
-implemented yet; this stub is intentional.
+Design Principles
+-----------------
+- Two ways in: sklearn-compatible pickles, and a ``module:object`` predict
+  protocol that covers every other framework without per-framework loaders.
+- Formats that cannot be loaded honestly are refused with an explanation,
+  never guessed at.
+- The model stays a black box: michi calls ``predict`` and never inspects
+  internals.
 """
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from michi.adapters.model import LoadedModel, load_model
+
+__all__ = ["LoadedModel", "load_model"]

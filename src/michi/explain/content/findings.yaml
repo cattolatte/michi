@@ -251,3 +251,119 @@ leakage-suspect:
     Leakage is the most common cause of a model that scores superbly offline
     and fails completely in production. michi can only raise the suspicion;
     confirming it needs knowledge of how the data was produced.
+
+# --- evaluation checks (michi eval) ---------------------------------------
+
+below-baseline:
+  title: Does not beat a trivial baseline
+  what: >
+    A model that always predicts the most common class — or, for regression,
+    always predicts the mean — scores at least as well as this model on the
+    same rows. Whatever the model learned does not yet improve on guessing.
+  options:
+    - check that the features actually reach the model (a preprocessing step may be missing)
+    - check that predictions line up with the rows they are scored against
+    - train longer, or on more data
+    - try a different model family or feature set
+    - accept that the available features may not carry signal for this target
+  caution: >
+    A respectable-looking accuracy can still lose to the majority-class
+    baseline when classes are imbalanced. The comparison, not the raw number,
+    is what tells you whether the model works.
+
+beats-baseline:
+  title: Beats the trivial baselines
+  what: >
+    The model scores better than always predicting the most common class or
+    the mean. This is the minimum bar for a model to be worth anything, not a
+    sign that it is good enough for use.
+  options:
+    - compare against a stronger reference model, not only the trivial one
+    - check the confidence interval to see whether the margin is solid
+    - look at per-slice scores before concluding the model works everywhere
+
+suspiciously-perfect:
+  title: Near-perfect score
+  what: >
+    The model is right almost every time. On real data this is far more often
+    caused by leakage — a feature that encodes the answer, or evaluation rows
+    the model was trained on — than by an excellent model.
+  options:
+    - check whether any feature is recorded at or after the moment of the outcome
+    - check that these evaluation rows were held out of training
+    - check for duplicate rows shared between training and evaluation data
+    - run `michi inspect --target` to look for leakage suspects among the features
+    - accept it if the task genuinely is that easy
+  caution: >
+    A model that scores perfectly offline and fails in production is the
+    classic symptom of leakage. Confirm before celebrating.
+
+single-class-predictions:
+  title: Only ever predicts one class
+  what: >
+    Every prediction is the same class, so the model carries no information
+    about which rows differ. This usually happens with imbalanced data, an
+    unhelpful decision threshold, or a model that failed to converge.
+  options:
+    - lower the decision threshold rather than using the default 0.5
+    - apply class weights when training
+    - resample the training data inside the cross-validation loop
+    - judge with precision, recall, or PR-AUC rather than accuracy
+    - check that the model was fitted before it was saved
+
+wide-interval:
+  title: Wide confidence interval
+  what: >
+    The interval around the headline metric is broad, which means the score
+    depends heavily on which rows happened to be in the evaluation set.
+    Differences smaller than the interval cannot be distinguished from noise.
+  options:
+    - evaluate on more rows
+    - use cross-validation instead of a single split
+    - report the interval alongside the score in any comparison
+    - treat close model rankings as ties
+  caution: >
+    Choosing between models whose intervals overlap is choosing between
+    coin flips.
+
+miscalibrated:
+  title: Probabilities do not match reality
+  what: >
+    Among rows the model gave roughly a 70% chance, the outcome did not occur
+    roughly 70% of the time. Ranking may still be fine, but the numbers cannot
+    be read as probabilities — which matters whenever a threshold, an expected
+    value, or a cost is computed from them.
+  options:
+    - calibrate the model (Platt scaling or isotonic regression) on held-out data
+    - use rank-based metrics such as ROC-AUC and ignore the raw probabilities
+    - pick the decision threshold empirically rather than trusting 0.5
+  caution: >
+    Fit any calibrator on data the model was not trained on, or it will simply
+    learn the training set's optimism.
+
+slice-gap:
+  title: Uneven performance across subgroups
+  what: >
+    The model performs markedly better on some subgroups than others. An
+    aggregate score hides this entirely: a model can look strong overall while
+    being unusable for a particular segment.
+  options:
+    - check whether the weak subgroup has enough training rows
+    - check whether features mean the same thing in each subgroup
+    - train separate models per subgroup
+    - report per-subgroup metrics alongside the aggregate
+    - accept the gap if the weak subgroup is out of scope
+  caution: >
+    When subgroups correspond to people, an unexamined performance gap is a
+    fairness problem as well as an accuracy one.
+
+small-evaluation-set:
+  title: Few evaluation rows
+  what: >
+    The metrics come from a small number of rows, so each one carries wide
+    uncertainty and a handful of examples can move any score noticeably.
+  options:
+    - evaluate on more data
+    - use cross-validation to reuse every row
+    - report confidence intervals with every number
+    - treat the results as directional rather than conclusive

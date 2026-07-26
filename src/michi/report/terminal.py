@@ -29,9 +29,10 @@ from michi.core.artifacts import (
     Finding,
     Severity,
 )
+from michi.core.manifest import RunManifest
 from michi.explain import explanation_for
 
-__all__ = ["render_profile", "severity_style"]
+__all__ = ["render_evaluation", "render_profile", "severity_style"]
 
 _KIND_STYLE = {
     ColumnKind.NUMERIC: "cyan",
@@ -322,3 +323,180 @@ def _format_bytes(size: int) -> str:
             return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}"
         value /= 1024
     return f"{value:.1f} GB"
+
+
+def render_evaluation(
+    manifest: RunManifest,
+    console: Console,
+    *,
+    explain: bool = False,
+) -> None:
+    """Render a run manifest from ``michi eval`` to the terminal.
+
+    Parameters
+    ----------
+    manifest
+        The artifact to render.
+    console
+        Destination console.
+    explain
+        Also print what each check means and which options exist.
+    """
+    console.print()
+    console.print(_eval_header(manifest))
+    console.print()
+    console.print(Padding(_eval_summary(manifest), (0, 0, 1, 2)))
+    console.print(Padding(_metrics_table(manifest), (0, 0, 1, 2)))
+
+    confusion = _confusion_table(manifest)
+    if confusion is not None:
+        console.print(Padding(confusion, (0, 0, 1, 2)))
+
+    slices = _slices_table(manifest)
+    if slices is not None:
+        console.print(Padding(slices, (0, 0, 1, 2)))
+
+    if manifest.checks:
+        console.print(Padding(_findings_table(manifest.checks), (0, 0, 1, 2)))
+        if explain:
+            console.print(Padding(_explanations(manifest.checks), (0, 0, 1, 2)))
+        else:
+            console.print(
+                Padding(
+                    Text(
+                        "Run again with --explain for what each check means "
+                        "and your options.",
+                        style="dim",
+                    ),
+                    (0, 0, 1, 2),
+                )
+            )
+
+
+def _eval_header(manifest: RunManifest) -> RenderableType:
+    text = Text()
+    text.append(" 道 ", style="bold red")
+    text.append(" michi eval", style="bold")
+    text.append("  ·  ", style="dim")
+    text.append(manifest.model.class_name, style="bold cyan")
+    return text
+
+
+def _eval_summary(manifest: RunManifest) -> RenderableType:
+    name = manifest.dataset.path.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
+    line = Text()
+    line.append(manifest.task, style="bold")
+    line.append("  ·  ", style="dim")
+    line.append(f"{manifest.n_rows:,} rows", style="bold")
+    line.append("  ·  ", style="dim")
+    line.append(name)
+    line.append("  ·  ", style="dim")
+    line.append("target ", style="dim")
+    line.append(manifest.target, style="bold green")
+
+    provenance = Text(style="dim")
+    provenance.append(
+        f"run {manifest.run_id}  ·  data {manifest.dataset.sha256[:12]}  ·  "
+        f"seed {manifest.seed}  ·  {manifest.duration_s:.2f}s"
+    )
+    return Group(line, provenance)
+
+
+def _metrics_table(manifest: RunManifest) -> RenderableType:
+    heading = Text("Metrics", style="bold")
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        header_style="bold dim",
+        pad_edge=False,
+        show_edge=False,
+    )
+    table.add_column("metric", no_wrap=True)
+    table.add_column("value", justify="right", no_wrap=True)
+    table.add_column("95% interval", justify="right", no_wrap=True)
+    for name in sorted(manifest.baselines):
+        table.add_column(f"vs {name}", justify="right", no_wrap=True)
+
+    baseline_names = sorted(manifest.baselines)
+    for index, metric in enumerate(manifest.metrics):
+        interval = (
+            f"{metric.ci_low:.4g} – {metric.ci_high:.4g}"
+            if metric.has_interval
+            else "—"
+        )
+        row = [
+            Text(metric.name, style="bold" if index == 0 else ""),
+            Text(_number(metric.value), style="bold" if index == 0 else ""),
+            Text(interval, style="dim"),
+        ]
+        for baseline in baseline_names:
+            row.append(
+                Text(
+                    _baseline_value(manifest, baseline, metric.name),
+                    style="dim",
+                )
+            )
+        table.add_row(*row)
+    return Group(heading, Text(), table)
+
+
+def _baseline_value(manifest: RunManifest, baseline: str, metric_name: str) -> str:
+    for metric in manifest.baselines.get(baseline, ()):
+        if metric.name == metric_name:
+            return _number(metric.value)
+    return "—"
+
+
+def _confusion_table(manifest: RunManifest) -> RenderableType | None:
+    classes = manifest.details.get("classes")
+    confusion = manifest.details.get("confusion")
+    if not classes or not confusion or len(classes) > 12:
+        return None
+
+    heading = Text("Confusion", style="bold")
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        header_style="bold dim",
+        pad_edge=False,
+        show_edge=False,
+    )
+    table.add_column("actual ╲ predicted", no_wrap=True)
+    for label in classes:
+        table.add_column(str(label), justify="right")
+
+    for index, label in enumerate(classes):
+        cells = [Text(str(label), style="bold")]
+        for column, count in enumerate(confusion[index]):
+            style = "green" if column == index else ("red" if count else "dim")
+            cells.append(Text(f"{count:,}", style=style))
+        table.add_row(*cells)
+    return Group(heading, Text(), table)
+
+
+def _slices_table(manifest: RunManifest) -> RenderableType | None:
+    slices = manifest.details.get("slices") or []
+    if not slices:
+        return None
+
+    ranked = sorted(slices, key=lambda item: item["score"])[:8]
+    heading = Text()
+    heading.append("Slices", style="bold")
+    heading.append(f"  ({len(slices)} subgroups, weakest first)", style="dim")
+
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        header_style="bold dim",
+        pad_edge=False,
+        show_edge=False,
+    )
+    table.add_column("column")
+    table.add_column("value")
+    table.add_column("rows", justify="right")
+    table.add_column("score", justify="right")
+    for item in ranked:
+        table.add_row(
+            Text(str(item["column"])),
+            Text(str(item["value"]), style="bold"),
+            f"{int(item['n_rows']):,}",
+            Text(_number(float(item["score"])), style="dim"),
+        )
+    return Group(heading, Text(), table)

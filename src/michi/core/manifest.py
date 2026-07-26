@@ -75,10 +75,13 @@ class Metric:
     greater_is_better: bool = True
 
     def __post_init__(self) -> None:
-        if self.ci_low is not None and self.ci_high is not None:
-            if self.ci_low > self.ci_high:
-                msg = f"metric {self.name!r}: interval bounds are inverted"
-                raise ValueError(msg)
+        if (
+            self.ci_low is not None
+            and self.ci_high is not None
+            and self.ci_low > self.ci_high
+        ):
+            msg = f"metric {self.name!r}: interval bounds are inverted"
+            raise ValueError(msg)
 
     @property
     def has_interval(self) -> bool:
@@ -355,9 +358,7 @@ class RunManifest:
             n_rows=int(payload.get("n_rows", 0)),
             duration_s=float(payload.get("duration_s", 0.0)),
             environment=Environment.from_dict(payload["environment"]),
-            schema_version=str(
-                payload.get("schema_version", MANIFEST_SCHEMA_VERSION)
-            ),
+            schema_version=str(payload.get("schema_version", MANIFEST_SCHEMA_VERSION)),
             michi_version=str(payload.get("michi_version", __version__)),
             created_at=str(payload.get("created_at", utc_now_iso())),
         )

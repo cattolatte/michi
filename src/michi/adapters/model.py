@@ -209,10 +209,7 @@ def _load_from_protocol(reference: str) -> LoadedModel:
     """Import ``module:object`` and adopt whatever it exposes."""
     module_name, _, attribute = reference.partition(":")
     if not module_name or not attribute:
-        msg = (
-            f"malformed model reference {reference!r}; expected "
-            "'mymodule:my_model'"
-        )
+        msg = f"malformed model reference {reference!r}; expected 'mymodule:my_model'"
         raise ModelError(msg)
 
     _ensure_cwd_importable()

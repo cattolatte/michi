@@ -20,5 +20,6 @@ nav:
   - Home: index.md
   - Commands:
       - inspect: inspect.md
+      - eval: eval.md
   - Philosophy: philosophy.md
   - Roadmap: roadmap.md

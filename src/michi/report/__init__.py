@@ -16,6 +16,6 @@ Design Principles
 from __future__ import annotations
 
 from michi.report.html import render_profile_html
-from michi.report.terminal import render_profile
+from michi.report.terminal import render_evaluation, render_profile
 
-__all__ = ["render_profile", "render_profile_html"]
+__all__ = ["render_evaluation", "render_profile", "render_profile_html"]

@@ -13,7 +13,14 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-__all__ = ["messy_csv", "messy_frame", "tidy_csv", "tidy_frame"]
+__all__ = [
+    "classification_data",
+    "messy_csv",
+    "messy_frame",
+    "regression_data",
+    "tidy_csv",
+    "tidy_frame",
+]
 
 _ROWS = 120
 
@@ -95,3 +102,79 @@ def tidy_csv(
     path = tmp_path_factory.mktemp("tidy") / "tidy.csv"
     tidy_frame.to_csv(path, index=False)
     return path
+
+
+@pytest.fixture(scope="session")
+def classification_data(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
+    """A trained sklearn pipeline and a held-out test set, as files."""
+    import joblib
+    import numpy as np
+    from sklearn.compose import ColumnTransformer
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+    rng = np.random.default_rng(0)
+    rows = 600
+    age = rng.normal(45, 14, rows).clip(18, 90)
+    income = rng.lognormal(10.6, 0.5, rows)
+    region = rng.choice(["north", "south", "east", "west"], rows)
+    logit = -0.4 + 0.05 * (age - 45) + 1.2 * (np.log(income) - 10.6)
+    label = (rng.random(rows) < 1 / (1 + np.exp(-logit))).astype(int)
+    frame = pd.DataFrame(
+        {"age": age, "income": income, "region": region, "churned": label}
+    )
+
+    split = rows // 2
+    train, test = frame.iloc[:split], frame.iloc[split:]
+    preprocessor = ColumnTransformer(
+        [
+            (
+                "num",
+                Pipeline([("impute", SimpleImputer()), ("scale", StandardScaler())]),
+                ["age", "income"],
+            ),
+            ("cat", OneHotEncoder(handle_unknown="ignore"), ["region"]),
+        ]
+    )
+    model = Pipeline(
+        [
+            ("pre", preprocessor),
+            ("rf", RandomForestClassifier(n_estimators=40, random_state=0)),
+        ]
+    )
+    model.fit(train.drop(columns="churned"), train["churned"])
+
+    directory = tmp_path_factory.mktemp("classification")
+    model_path = directory / "model.pkl"
+    data_path = directory / "test.csv"
+    joblib.dump(model, model_path)
+    test.to_csv(data_path, index=False)
+    return model_path, data_path
+
+
+@pytest.fixture(scope="session")
+def regression_data(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
+    """A trained regressor and a held-out test set, as files."""
+    import joblib
+    import numpy as np
+    from sklearn.linear_model import Ridge
+
+    rng = np.random.default_rng(1)
+    rows = 600
+    feature_a = rng.normal(0, 1, rows)
+    feature_b = rng.normal(5, 2, rows)
+    value = 3.0 * feature_a - 1.5 * feature_b + rng.normal(0, 1, rows)
+    frame = pd.DataFrame({"a": feature_a, "b": feature_b, "value": value})
+
+    split = rows // 2
+    train, test = frame.iloc[:split], frame.iloc[split:]
+    model = Ridge().fit(train[["a", "b"]], train["value"])
+
+    directory = tmp_path_factory.mktemp("regression")
+    model_path = directory / "ridge.joblib"
+    data_path = directory / "test.csv"
+    joblib.dump(model, model_path)
+    test.to_csv(data_path, index=False)
+    return model_path, data_path
