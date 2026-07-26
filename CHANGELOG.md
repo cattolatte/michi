@@ -6,6 +6,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-27
+
+Experiment grids: `michi sweep`.
+
+### Added
+- **`michi sweep`** — executes a declarative grid of models × recipes × seeds
+  from a YAML plan, recording one run manifest per cell. Progress is printed
+  as it goes, and `--dry-run` lists the grid without running anything.
+- **Content-hash caching and resumption.** Each cell's identity is a hash of
+  the data, recipe, model, seed, and fold count that produce it, so an
+  interrupted sweep resumes exactly where it stopped, and editing one recipe
+  re-runs exactly the cells that use it. A long sweep *will* be interrupted;
+  resumption is not a nicety.
+- **Contained failure**: a cell that cannot train is recorded and the grid
+  continues, because losing thirty completed cells to the thirty-first would
+  be indefensible.
+- **`--recipe` support in `bench`** — a recipe's deterministic steps run once
+  up front; its fitted steps become a transformer fitted inside each fold, so
+  comparing preprocessing strategies stays leak-free. A recipe the user wrote
+  takes precedence over michi's default preparation.
+- Sweep manifests feed straight into `michi report`.
+- Documentation for `sweep`.
+
 ## [0.5.0] — 2026-07-27
 
 The console: `michi` with no arguments.

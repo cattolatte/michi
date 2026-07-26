@@ -33,6 +33,7 @@ from michi.recipes.model import (
     RecipeStep,
     SourceSchema,
 )
+from michi.recipes.pipeline import apply_deterministic, build_transformer
 from michi.recipes.serialise import dumps_recipe, load_recipe, write_recipe
 
 __all__ = [
@@ -43,7 +44,9 @@ __all__ = [
     "Recipe",
     "RecipeStep",
     "SourceSchema",
+    "apply_deterministic",
     "apply_recipe",
+    "build_transformer",
     "command_for",
     "dumps_recipe",
     "export_recipe",

@@ -9,6 +9,7 @@ Real michi output, committed so you can read the product before installing it.
 | [`benchmark.html`](benchmark.html) | `michi bench --report` | A model comparison with confidence intervals and significance verdicts — 6 KB, also fully offline |
 | [`recipe.yaml`](recipe.yaml) | `michi clean` | Cleaning decisions as a commented, hand-editable file |
 | [`pipeline.py`](pipeline.py) | `michi export` | The recipe compiled into standalone Python — imports pandas and scikit-learn, never michi |
+| [`sweep.yaml`](sweep.yaml) | hand-written | A grid of experiments: models × recipes × seeds |
 
 ```bash
 michi inspect data/customers.csv --target purchased \

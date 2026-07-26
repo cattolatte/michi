@@ -31,6 +31,7 @@ from michi.core.errors import DataError, RunError
 from michi.core.io import LoadedTable
 from michi.core.manifest import Metric, ModelSpec, RunManifest, capture_environment
 from michi.evaluation import detect_task, new_run_id
+from michi.recipes.model import Recipe
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import numpy as np
@@ -99,6 +100,7 @@ def run_benchmark(
     task: str | None = None,
     folds: int = 5,
     policy: PreparationPolicy | None = None,
+    recipe: Recipe | None = None,
     seed: int = 0,
     group_id: str | None = None,
 ) -> BenchResult:
@@ -118,6 +120,11 @@ def run_benchmark(
         Number of cross-validation folds.
     policy
         Column preparation choices; documented defaults are used when omitted.
+    recipe
+        A cleaning recipe to apply. Its deterministic steps run once, up
+        front; its fitted steps replace michi's default preparation inside
+        each fold, because a recipe the user wrote takes precedence over
+        michi's assumptions.
     seed
         Seed for fold assignment and every model that accepts one.
     group_id
@@ -144,6 +151,14 @@ def run_benchmark(
         available = ", ".join(str(name) for name in frame.columns[:10])
         msg = f"target {target!r} is not a column; available columns: {available}"
         raise DataError(msg)
+
+    if recipe is not None:
+        from michi.recipes import apply_deterministic
+
+        frame = apply_deterministic(recipe, frame)
+        if target not in frame.columns:
+            msg = f"the recipe removes the target column {target!r}"
+            raise DataError(msg)
 
     usable = frame[frame[target].notna()]
     if usable.empty:
@@ -187,6 +202,7 @@ def run_benchmark(
                 splitter=splitter,
                 scorers=scorers,
                 policy=resolved_policy,
+                recipe=recipe,
                 seed=seed,
             )
         )
@@ -224,6 +240,7 @@ def run_benchmark(
             comparisons=comparisons,
             group_id=identifier,
             n_rows=int(usable.shape[0]),
+            recipe_path=recipe.source.path if recipe else None,
         )
         for result in results
         if result.failed is None
@@ -315,6 +332,7 @@ def _run_one_model(
     splitter: Any,
     scorers: tuple[tuple[str, Any, bool], ...],
     policy: PreparationPolicy,
+    recipe: Recipe | None,
     seed: int,
 ) -> ModelResult:
     """Cross-validate one model, capturing failure rather than aborting."""
@@ -328,10 +346,11 @@ def _run_one_model(
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for train_index, test_index in splitter.split(features, labels):
-                pipeline = build_pipeline(
-                    features,
-                    build_model(name, task, seed),
-                    policy,
+                pipeline = _fold_pipeline(
+                    features=features,
+                    estimator=build_model(name, task, seed),
+                    policy=policy,
+                    recipe=recipe,
                     needs_scaling=entry.needs_scaling,
                 )
                 pipeline.fit(features.iloc[train_index], labels[train_index])
@@ -369,6 +388,27 @@ def _run_one_model(
         fold_scores=tuple(per_metric[scorers[0][0]]),
         fit_seconds=time.perf_counter() - started,
     )
+
+
+def _fold_pipeline(
+    *,
+    features: pd.DataFrame,
+    estimator: Any,
+    policy: PreparationPolicy,
+    recipe: Recipe | None,
+    needs_scaling: bool,
+) -> Any:
+    """Build the per-fold pipeline, preferring the user's recipe if given."""
+    from sklearn.pipeline import Pipeline
+
+    if recipe is not None:
+        from michi.recipes import build_transformer
+
+        transformer = build_transformer(recipe, features)
+        if transformer is not None:
+            return Pipeline([("prepare", transformer), ("model", estimator)])
+
+    return build_pipeline(features, estimator, policy, needs_scaling=needs_scaling)
 
 
 def _fold_interval(values: np.ndarray[Any, Any]) -> tuple[float | None, float | None]:
@@ -481,6 +521,7 @@ def _manifest_for(
     comparisons: tuple[Comparison, ...],
     group_id: str,
     n_rows: int,
+    recipe_path: str | None = None,
 ) -> RunManifest:
     """Record one model's benchmark result as a durable manifest."""
     comparison = next((item for item in comparisons if item.model == result.name), None)
@@ -502,6 +543,7 @@ def _manifest_for(
             "fold_scores": list(result.fold_scores),
             "preparation": policy.to_dict(),
             "preparation_summary": describe_policy(policy, scaled=True),
+            "recipe": recipe_path,
             "comparison": comparison.to_dict() if comparison else None,
             "fit_seconds": round(result.fit_seconds, 4),
         },

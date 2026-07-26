@@ -1,0 +1,14 @@
+# A michi sweep plan: models × recipes × seeds.
+# Paths are relative to this file, so the sweep runs from anywhere.
+#
+#   michi sweep sweep.yaml --dry-run    # list the 12 cells
+#   michi sweep sweep.yaml              # run them, resuming if interrupted
+
+data: data/customers.csv
+target: churned
+folds: 5
+
+grid:
+  models: [linear, tree, rf]
+  recipes: [recipe.yaml]
+  seeds: [0, 1, 2, 3]
