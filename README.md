@@ -63,7 +63,7 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers, leakage suspects — every finding explained | **v0.1** |
 | `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, subgroup gaps | **v0.2** |
 | `michi bench … --models rf,linear,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | **v0.3** |
-| `michi clean` · `apply` · `export` | Interactive cleaning that authors a reproducible recipe and exports readable pipeline code | v0.4 |
+| `michi clean` · `apply` · `export` | Interactive cleaning that authors a reproducible recipe and exports readable pipeline code | **v0.4** |
 | `michi` | Interactive console with context-aware completion; every session exports to a replayable script | v0.5 |
 | `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds | v0.6 |
 | `michi report runs/` | HTML · Markdown · LaTeX reports over recorded runs | **v0.3** |
@@ -146,7 +146,8 @@ cross-validation folds share training data and a naive test calls noise
 significant.
 
 Full options: [`michi inspect`](docs/inspect.md) · [`michi eval`](docs/eval.md) ·
-[`michi bench`](docs/bench.md) · [`michi report`](docs/report.md).
+[`michi bench`](docs/bench.md) · [`michi report`](docs/report.md) ·
+[`michi clean`](docs/clean.md).
 
 <br>
 

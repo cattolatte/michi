@@ -23,5 +23,6 @@ nav:
       - eval: eval.md
       - bench: bench.md
       - report: report.md
+      - clean · apply · export: clean.md
   - Philosophy: philosophy.md
   - Roadmap: roadmap.md

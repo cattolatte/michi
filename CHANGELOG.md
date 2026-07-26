@@ -6,6 +6,37 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-26
+
+Cleaning decisions as a file you own: `michi clean`, `apply`, and `export`.
+
+### Added
+- **`michi clean`** — authors a **recipe**: an ordered list of declarative
+  cleaning operations plus the schema they were written against. Your data is
+  never touched. The interactive mode walks the *findings* `inspect` produced,
+  grouped, so a two-hundred-column dataset yields a handful of questions
+  rather than two hundred prompts — and "leave them as they are" is always
+  present and always the default.
+- **Full flag parity**: `--drop`, `--dedupe`, `--cast`, `--impute`, `--clip`,
+  `--encode`, `--scale` express everything the wizard can, and every session
+  prints the non-interactive command that reproduces it.
+- **`michi apply`** — executes a recipe non-destructively to a new file. The
+  recipe's schema snapshot acts as a data contract: applying it to data that
+  lacks the named columns fails loudly, with `--no-strict` to degrade
+  gracefully.
+- **`michi export`** — compiles a recipe into a standalone Python module that
+  imports pandas and scikit-learn, never michi. Deterministic steps become a
+  `prepare()` function; fitted steps become an sklearn transformer to fit
+  inside cross-validation. Generated code passes ruff check and format, and a
+  test executes it and asserts it matches `michi apply`.
+- **Recipe artifact** (schema 1.0) written as commented YAML through a
+  template — `yaml.dump` cannot produce a comment, and the comments carry the
+  reason each decision was made.
+- Honest leakage reporting: steps that learn from data are marked as such,
+  `apply` says when it fitted them on a whole file, and the caveat is written
+  into the recipe itself.
+- Documentation for `clean`, `apply`, and `export`.
+
 ## [0.3.0] — 2026-07-26
 
 Honest model comparison: `michi bench` and `michi report`. This completes the

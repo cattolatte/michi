@@ -23,6 +23,7 @@ from rich.console import Console
 
 from michi import __version__
 from michi.cli.bench_cmd import bench_command
+from michi.cli.clean_cmd import apply_command, clean_command, export_command
 from michi.cli.eval_cmd import eval_command
 from michi.cli.inspect_cmd import inspect_command
 from michi.cli.report_cmd import report_command
@@ -41,6 +42,9 @@ app.command("inspect")(inspect_command)
 app.command("eval")(eval_command)
 app.command("bench")(bench_command)
 app.command("report")(report_command)
+app.command("clean")(clean_command)
+app.command("apply")(apply_command)
+app.command("export")(export_command)
 
 
 def _print_version(value: bool) -> None:
