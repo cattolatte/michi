@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from michi.console import COMMANDS, Session, banner, dispatch, expand
+from michi.console import COMMANDS, Session, banner, dispatch, expand, split_line
 from michi.core.config import ProjectDefaults, load_defaults
 
 
@@ -101,6 +101,19 @@ def test_show_models_lists_the_catalogue() -> None:
     output = _run("show models", Session())
     assert "rf" in output
     assert "dummy" in output
+
+
+# --- line splitting --------------------------------------------------------
+
+
+def test_windows_paths_survive_splitting() -> None:
+    """A backslash is a path separator here, never an escape character."""
+    assert split_line(r"use C:\data\train.csv") == ["use", r"C:\data\train.csv"]
+
+
+def test_quoted_paths_with_spaces_work() -> None:
+    """Quoting still groups an argument containing spaces."""
+    assert split_line('use "my file.csv"') == ["use", "my file.csv"]
 
 
 # --- dispatch --------------------------------------------------------------

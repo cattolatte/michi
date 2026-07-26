@@ -28,6 +28,11 @@ The console: `michi` with no arguments.
 - The console's context *is* the `michi.toml` model, so `save` persists it and
   a later session restores it.
 
+### Fixed
+- Console line splitting treated a backslash as an escape character, which
+  silently mangled every Windows path a user typed. Backslashes are now
+  literal; quoting still groups arguments containing spaces.
+
 ### Notes
 - The console contains **zero logic**: every verb dispatches to the same Typer
   application the shell invokes, and a test asserts no console verb exists

@@ -27,7 +27,7 @@ from rich.text import Text
 
 from michi.console.session import Session
 
-__all__ = ["COMMANDS", "ConsoleCommand", "dispatch", "expand"]
+__all__ = ["COMMANDS", "ConsoleCommand", "dispatch", "expand", "split_line"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,10 +88,31 @@ _VERBS = {"inspect", "eval", "bench", "clean", "apply", "export", "report"}
 _SETTABLE = ("data", "target", "recipe", "runs_dir", "models", "seed", "cv")
 
 
+def split_line(line: str) -> list[str]:
+    """Split a console line into arguments, treating backslashes literally.
+
+    ``shlex.split`` reads a backslash as an escape character, which silently
+    mangles every Windows path a user types (``use C:\\data\\train.csv``
+    becomes ``C:datatrain.csv``). Quoting still works, so a path with spaces
+    can be given as ``use "my file.csv"``.
+
+    Examples
+    --------
+    >>> split_line(r"use C:\\data\train.csv")
+    ['use', 'C:\\data\\train.csv']
+    >>> split_line('use "my file.csv"')
+    ['use', 'my file.csv']
+    """
+    lexer = shlex.shlex(line, posix=True)
+    lexer.whitespace_split = True
+    lexer.escape = ""
+    return list(lexer)
+
+
 def dispatch(line: str, session: Session, console: Console) -> bool:
     """Run one console line. Returns ``False`` when the session should end."""
     try:
-        parts = shlex.split(line)
+        parts = split_line(line)
     except ValueError as err:
         console.print(f"[red]could not parse that line:[/] {err}")
         return True
@@ -383,7 +404,7 @@ def _as_script(session: Session) -> str:
         "",
     ]
     for item in session.history:
-        parts = shlex.split(item)
+        parts = split_line(item)
         if not parts or parts[0] not in _VERBS:
             continue
         argv = expand(parts[0], parts[1:], session)

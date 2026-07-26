@@ -16,7 +16,13 @@ Design Principles
 
 from __future__ import annotations
 
-from michi.console.commands import COMMANDS, ConsoleCommand, dispatch, expand
+from michi.console.commands import (
+    COMMANDS,
+    ConsoleCommand,
+    dispatch,
+    expand,
+    split_line,
+)
 from michi.console.session import Session
 from michi.console.shell import banner, run_console
 
@@ -28,4 +34,5 @@ __all__ = [
     "dispatch",
     "expand",
     "run_console",
+    "split_line",
 ]
