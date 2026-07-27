@@ -6,6 +6,46 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-07-27
+
+Target encoding, and a menu for picking the columns to engineer.
+
+### Added
+- **`target-encode`** — replace a category with the target's mean for that
+  category. The strongest encoding available for high-cardinality columns, and
+  the easiest way to destroy a model: encoded naively, a unique id maps
+  one-to-one onto its own label. On 600 random labels against 600 unique ids —
+  data containing no signal whatsoever — the naive encoding cross-validates at
+  **1.000** and michi's out-of-fold encoding at 0.517. A test asserts both
+  halves of that comparison, because the trap is only instructive if you can
+  see it spring.
+
+  michi ships its own encoder rather than scikit-learn's. sklearn deprecated
+  the parameter that makes `TargetEncoder` reproducible in 1.9 and removes it
+  in 1.11, and the replacement needs a newer floor than michi's `>=1.4` —
+  which would drop users to fix one operation. `export` writes the encoder
+  class into the generated file, so exported pipelines still import nothing
+  but pandas and scikit-learn, and the reader can see the arithmetic.
+- **The feature menu.** `michi clean` with no operation flags now follows the
+  findings triage with a column picker: operations grouped by what your
+  columns make possible, nothing preselected, space to pick. `datepart` is
+  offered when there are timestamps, `log` when something is actually skewed,
+  `target-encode` when a categorical column is too wide for one-hot. michi
+  lists shapes and stays quiet about worth — whether a product term helps your
+  problem is domain knowledge michi does not have.
+
+### Changed
+- `examples/sweep.yaml` is now a verified plan rather than a hand-written one:
+  12 cells in 6.1s against the example dataset, with the ranked output in
+  `examples/README.md`. It was the last file in the repository claiming to be
+  an example without having been run.
+- The recipe file header listed seven operations and had not been updated
+  since v1.0. It now lists all thirteen, split into cleaning and engineering,
+  and the leakage note names every fitted step.
+
+### Notes
+- The scikit-learn floor stays at `>=1.4`.
+
 ## [1.2.0] — 2026-07-27
 
 ### Added

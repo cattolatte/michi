@@ -47,6 +47,10 @@ _KNOWN_OPS: dict[str, frozenset[str]] = {
     "interact": frozenset({"columns", "method"}),
     "binarize": frozenset({"columns", "threshold"}),
     "bin": frozenset({"columns", "bins", "strategy"}),
+    # `target` is recorded so the recipe stays self-describing: `apply` has
+    # only a frame to work with, and an encoder told its target out-of-band
+    # would not be reproducible from the file alone.
+    "target-encode": frozenset({"columns", "target", "smoothing"}),
 }
 
 
@@ -59,7 +63,7 @@ class RecipeStep:
     op
         Operation name. Cleaning: ``drop``, ``dedupe``, ``cast``, ``impute``,
         ``clip``, ``encode``, ``scale``. Feature engineering: ``datepart``,
-        ``log``, ``interact``, ``binarize``, ``bin``.
+        ``log``, ``interact``, ``binarize``, ``bin``, ``target-encode``.
     params
         Operation-specific parameters.
     why
@@ -101,14 +105,16 @@ class RecipeStep:
     def is_fitted(self) -> bool:
         """Whether this step learns something from the data it sees.
 
-        Fitted steps — imputation, encoding, scaling, quantile binning —
-        must be fitted on training data only. Deterministic steps depend only
-        on the row in front of them and can be applied anywhere without risk
-        of leakage.
+        Fitted steps — imputation, encoding, scaling, quantile binning,
+        target encoding — must be fitted on training data only. Deterministic
+        steps depend only on the row in front of them and can be applied
+        anywhere without risk of leakage.
 
         The distinction is not cosmetic. Quantile bin edges learned from the
-        whole dataset have already seen the test fold's distribution.
-        Classifying a step here is what puts it inside the cross-validation
+        whole dataset have already seen the test fold's distribution, and a
+        target encoding fitted on everything has seen each row's own label —
+        the most common silent leak in tabular ML. Classifying a step here is
+        what puts it inside the cross-validation
         fold in :func:`~michi.recipes.pipeline.build_transformer` and inside
         ``build_pipeline()`` in exported code.
 
@@ -119,7 +125,7 @@ class RecipeStep:
         >>> RecipeStep("bin", {"columns": ["age"]}).is_fitted
         True
         """
-        return self.op in {"impute", "encode", "scale", "bin"}
+        return self.op in {"impute", "encode", "scale", "bin", "target-encode"}
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a JSON/YAML-compatible dictionary."""

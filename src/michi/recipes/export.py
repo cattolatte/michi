@@ -43,6 +43,7 @@ def export_recipe(recipe: Recipe, *, module_name: str = "pipeline") -> str:
 
     lines: list[str] = []
     lines.extend(_module_header(recipe, module_name, deterministic, fitted))
+    lines.extend(_encoder_class(fitted))
     lines.extend(_prepare_function(deterministic))
     lines.extend(_pipeline_function(fitted))
     lines.extend(_usage_example(recipe, module_name))
@@ -103,7 +104,11 @@ def _imports(
     )
 
     plain = ["import pandas as pd"]
-    if _uses("log", deterministic) or _uses("interact", deterministic):
+    if (
+        _uses("log", deterministic)
+        or _uses("interact", deterministic)
+        or _uses("target-encode", fitted)
+    ):
         plain.append("import numpy as np")
 
     modules: dict[str, set[str]] = {}
@@ -114,6 +119,8 @@ def _imports(
     if fitted:
         modules.setdefault("sklearn.compose", set()).add("ColumnTransformer")
         modules.setdefault("sklearn.pipeline", set()).add("Pipeline")
+    for module, names in _encoder_imports(fitted).items():
+        modules.setdefault(module, set()).update(names)
 
     grouped = [
         f"from {module} import {', '.join(sorted(names))}"
@@ -151,6 +158,16 @@ def _transformer_import(step: RecipeStep) -> tuple[str, str]:
     if step.op == "bin":
         return "sklearn.preprocessing", "KBinsDiscretizer"
     return "", ""
+
+
+def _encoder_imports(fitted: tuple[RecipeStep, ...]) -> dict[str, set[str]]:
+    """Extra imports the emitted target encoder needs, if it is emitted."""
+    if not _uses("target-encode", fitted):
+        return {}
+    return {
+        "sklearn.base": {"BaseEstimator", "TransformerMixin"},
+        "sklearn.model_selection": {"KFold"},
+    }
 
 
 def _prepare_function(steps: tuple[RecipeStep, ...]) -> list[str]:
@@ -450,6 +467,11 @@ def _transformer(step: RecipeStep) -> str:
             "    subsample=None,\n"
             ")"
         )
+    if step.op == "target-encode":
+        from michi.recipes.encoders import DEFAULT_SMOOTHING
+
+        smoothing = float(step.params.get("smoothing", DEFAULT_SMOOTHING))
+        return f"OutOfFoldTargetEncoder(smoothing={smoothing})"
     return '"passthrough"'
 
 
@@ -492,3 +514,85 @@ def _usage_example(recipe: Recipe, module_name: str) -> list[str]:
 
 def _dtype(name: str) -> str:
     return {"category": "category", "string": "string"}.get(name, name)
+
+
+_ENCODER_SOURCE = '''class OutOfFoldTargetEncoder(BaseEstimator, TransformerMixin):
+    """Replace each category with the target's mean for that category.
+
+    Written out in full rather than imported, so this file keeps its promise
+    to depend on nothing but pandas and scikit-learn — and so you can read
+    exactly what the encoding did.
+
+    Training rows are encoded out of fold: each row's value comes from folds
+    that did not contain it. A row encoded with a mean that included its own
+    label has memorised the answer, which is the most common silent leak in
+    tabular machine learning.
+
+    Small categories are pulled toward the global mean by `smoothing`, read as
+    "how many observations of evidence before a category speaks for itself".
+    """
+
+    def __init__(self, smoothing=20.0, n_splits=5, random_state=0):
+        self.smoothing = smoothing
+        self.n_splits = n_splits
+        self.random_state = random_state
+
+    def _means(self, column, y, prior):
+        grouped = y.groupby(column.astype("object"), dropna=False)
+        return (grouped.sum() + self.smoothing * prior) / (
+            grouped.count() + self.smoothing
+        )
+
+    def fit(self, X, y):
+        frame = pd.DataFrame(X).reset_index(drop=True)
+        target = pd.Series(np.asarray(y, dtype=float)).reset_index(drop=True)
+        self.prior_ = float(target.mean())
+        self.mappings_ = {
+            name: self._means(frame[name], target, self.prior_)
+            for name in frame.columns
+        }
+        return self
+
+    def transform(self, X):
+        # New rows were not part of fitting, so the full-data mapping is safe.
+        frame = pd.DataFrame(X).reset_index(drop=True)
+        out = np.empty((len(frame), frame.shape[1]), dtype=float)
+        for position, name in enumerate(frame.columns):
+            encoded = frame[name].astype("object").map(self.mappings_[name])
+            out[:, position] = encoded.fillna(self.prior_).to_numpy(dtype=float)
+        return out
+
+    def fit_transform(self, X, y=None, **kwargs):
+        # Training rows must not see themselves; each fold is encoded by the
+        # others. This is the half that differs from transform, on purpose.
+        frame = pd.DataFrame(X).reset_index(drop=True)
+        target = pd.Series(np.asarray(y, dtype=float)).reset_index(drop=True)
+        self.fit(frame, target)
+
+        out = np.full((len(frame), frame.shape[1]), self.prior_, dtype=float)
+        splits = min(self.n_splits, len(frame))
+        if splits < 2:
+            return out
+
+        folds = KFold(n_splits=splits, shuffle=True, random_state=self.random_state)
+        for train_index, test_index in folds.split(frame):
+            inner_y = target.iloc[train_index]
+            prior = float(inner_y.mean())
+            for position, name in enumerate(frame.columns):
+                mapping = self._means(frame[name].iloc[train_index], inner_y, prior)
+                encoded = frame[name].iloc[test_index].astype("object").map(mapping)
+                out[test_index, position] = encoded.fillna(prior).to_numpy(dtype=float)
+        return out
+'''
+
+
+def _encoder_class(fitted: tuple[RecipeStep, ...]) -> list[str]:
+    """Emit the target encoder's source, when the recipe uses one.
+
+    Written into the file rather than imported from michi: the generated code
+    promises to depend on pandas and scikit-learn only, and a reader of a
+    target encoding deserves to see the arithmetic that produced it.
+    """
+    if not _uses("target-encode", fitted):
+        return []
+    return [*_ENCODER_SOURCE.splitlines(), "", ""]

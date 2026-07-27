@@ -96,6 +96,13 @@ def clean_command(
         list[str] | None,
         typer.Option("--bin", help="COLUMN=N[:quantile|uniform] — discretise."),
     ] = None,
+    target_encode: Annotated[
+        str | None,
+        typer.Option(
+            "--target-encode",
+            help="Comma-separated categorical columns to encode by target mean.",
+        ),
+    ] = None,
     no_input: Annotated[
         bool,
         typer.Option("--no-input", help="Never prompt; use only the flags given."),
@@ -155,6 +162,7 @@ def clean_command(
                 interact,
                 binarize,
                 bin_,
+                target_encode,
             ]
         )
         if flags_given or no_input:
@@ -172,6 +180,7 @@ def clean_command(
                 interact=_split(interact),
                 binarize=_pairs(binarize, "binarize"),
                 bin_=_pairs(bin_, "bin"),
+                target_encode=_split(target_encode),
                 target=target,
             )
         else:
@@ -333,7 +342,86 @@ def _run_wizard(profile, console: Console, *, target: str | None):  # type: igno
     answers: list[tuple[object, str]] = []
     for index, question in enumerate(questions, start=1):
         answers.append((question, _ask(question, index, len(questions), console)))
-    return recipe_from_answers(profile, answers, target=target)  # type: ignore[arg-type]
+    recipe = recipe_from_answers(profile, answers, target=target)  # type: ignore[arg-type]
+    return _add_features(profile, recipe, console, target=target)
+
+
+def _add_features(profile, recipe, console: Console, *, target: str | None):  # type: ignore[no-untyped-def]
+    """Offer the feature-engineering menu, column by column.
+
+    Findings triage answers "what is wrong with this data". This answers
+    "what could I build from it", which no finding can raise because nothing
+    is wrong — it is the part of a project where the user's knowledge of the
+    domain does the work, so michi lists shapes and stays quiet about worth.
+    """
+    import questionary
+
+    from michi.recipes import feature_opportunities
+    from michi.recipes.model import Recipe
+
+    opportunities = feature_opportunities(profile)
+    if not opportunities:
+        return recipe
+
+    console.print()
+    console.print(
+        Padding(
+            Text(
+                "Feature engineering — optional, and michi has no opinion here.\n"
+                "Nothing is preselected; space to pick, enter to move on.",
+                style="dim",
+            ),
+            (0, 0, 1, 2),
+        )
+    )
+
+    steps = list(recipe.steps)
+    for index, opportunity in enumerate(opportunities, start=1):
+        heading = Text()
+        heading.append(f"  [{index}/{len(opportunities)}]  ", style="dim")
+        heading.append(opportunity.label, style="bold")
+        console.print(heading)
+        console.print(Padding(Text(opportunity.detail, style="dim"), (0, 0, 0, 8)))
+
+        chosen = questionary.checkbox(
+            "  Which columns?",
+            choices=[
+                questionary.Choice(title=_column_label(profile, name), value=name)
+                for name in opportunity.columns
+            ],
+        ).ask()
+        if not chosen:
+            continue
+        if opportunity.op == "interact" and len(chosen) < 2:
+            console.print(
+                "      [dim]interact needs at least two columns — skipped.[/]"
+            )
+            continue
+        steps.append(opportunity.step(chosen))
+        console.print(
+            f"      [dim]added: {opportunity.op} on {len(chosen)} column(s)[/]"
+        )
+
+    from michi.recipes.author import _ordered
+
+    return Recipe(
+        steps=_ordered(steps),
+        target=recipe.target or target,
+        source=recipe.source,
+    )
+
+
+def _column_label(profile, name: str) -> str:  # type: ignore[no-untyped-def]
+    """A column name with the one statistic that matters for choosing it."""
+    try:
+        column = profile.column(name)
+    except KeyError:
+        return name
+    if column.kind.value == "numeric":
+        skew = column.stats.get("skew")
+        shape = f"skew {skew:+.2f}" if skew is not None else "numeric"
+        return f"{name}  ({shape}, {column.unique} distinct)"
+    return f"{name}  ({column.kind.value}, {column.unique} distinct)"
 
 
 def _ask(question, index: int, total: int, console: Console) -> str:  # type: ignore[no-untyped-def]

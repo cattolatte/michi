@@ -20,8 +20,10 @@ from __future__ import annotations
 from michi.recipes.apply import ApplyResult, apply_recipe
 from michi.recipes.author import (
     Choice,
+    Opportunity,
     Question,
     command_for,
+    feature_opportunities,
     questions_for,
     recipe_from_answers,
     recipe_from_flags,
@@ -44,6 +46,7 @@ __all__ = [
     "RECIPE_SCHEMA_VERSION",
     "ApplyResult",
     "Choice",
+    "Opportunity",
     "Question",
     "Recipe",
     "RecipeStep",
@@ -54,6 +57,7 @@ __all__ = [
     "command_for",
     "dumps_recipe",
     "export_recipe",
+    "feature_opportunities",
     "load_recipe",
     "questions_for",
     "recipe_from_answers",

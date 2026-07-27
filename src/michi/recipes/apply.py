@@ -155,6 +155,7 @@ def _apply_step(
         "interact": _apply_interact,
         "binarize": _apply_binarize,
         "bin": _apply_bin,
+        "target-encode": _apply_target_encode,
     }
     present = _resolve_columns(step, frame, strict=strict, notes=notes)
     if step.columns and not present and step.op != "dedupe":
@@ -481,4 +482,47 @@ def _apply_bin(
             # column alone is better than raising on a degenerate column.
             continue
         result[name] = pd.to_numeric(binned, errors="coerce")
+    return result
+
+
+def _apply_target_encode(
+    step: RecipeStep, frame: pd.DataFrame, columns: list[str]
+) -> pd.DataFrame:
+    """Replace a category with the target's mean for that category.
+
+    Out of fold, always: a row encoded with a mean that included its own label
+    has memorised the answer. `export` puts this inside ``build_pipeline`` so
+    the encoding is refitted per fold there too.
+    """
+    import pandas as pd
+
+    from michi.recipes.encoders import DEFAULT_SMOOTHING, encode_frame
+
+    target = step.params.get("target")
+    if not target:
+        msg = "target-encode: needs `target` naming the label column"
+        raise RecipeError(msg)
+    if str(target) not in frame.columns:
+        msg = f"target-encode: target column {target!r} is not in the data"
+        raise RecipeError(msg)
+
+    usable = [name for name in columns if name != str(target)]
+    if not usable:
+        return frame.copy()
+
+    labels = pd.to_numeric(frame[str(target)], errors="coerce")
+    if labels.isna().all():
+        # A non-numeric target (string classes) still encodes fine once it is
+        # mapped to codes; the mean is then the rate of the last class.
+        labels = frame[str(target)].astype("category").cat.codes.astype(float)
+
+    encoded = encode_frame(
+        frame,
+        usable,
+        labels,
+        smoothing=float(step.params.get("smoothing", DEFAULT_SMOOTHING)),
+    )
+    result = frame.copy()
+    for position, name in enumerate(usable):
+        result[name] = encoded[:, position]
     return result

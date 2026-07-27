@@ -22,19 +22,11 @@ edges, in plugins, rather than in the core.
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
 | **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
+| **v1.3** | target encoding + feature menu | `target-encode` with an out-of-fold encoder michi owns; an interactive column picker for feature engineering. **Shipped.** |
 
 ## Known gaps
 
 Stated plainly, because a roadmap that only lists wins is marketing.
-
-**Target encoding.** The highest-value categorical encoding for tabular ML,
-and the one most likely to leak. scikit-learn deprecated the parameter that
-makes `TargetEncoder` reproducible in 1.9 and removes it in 1.11; the
-replacement needs a newer scikit-learn than michi's `>=1.4` floor. The
-implementation is straightforward — the fitted/deterministic split already
-puts it in the right place — but a step whose output changes between runs
-would break the reproducibility everything else rests on. It ships when the
-floor moves.
 
 **Hyperparameter search is grid-only.** `sweep` enumerates models × recipes ×
 seeds. Bayesian or successive-halving search would be a real addition, and

@@ -143,4 +143,11 @@ def _transformer_for(step: RecipeStep) -> Any | None:
             subsample=None,
         )
 
+    if step.op == "target-encode":
+        from michi.recipes.encoders import DEFAULT_SMOOTHING, build_target_encoder
+
+        return build_target_encoder(
+            smoothing=float(step.params.get("smoothing", DEFAULT_SMOOTHING))
+        )
+
     return None

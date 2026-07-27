@@ -107,16 +107,42 @@ they inherit `apply`, `export`, and the fitted/deterministic split.
 | `interact` | `--interact a,b,c` | Pairwise products of the named numeric columns |
 | `binarize` | `--binarize col=0` | Reduce to above the threshold, or not |
 | `bin` | `--bin col=5:quantile` | Discretise into N bins — `quantile` or `uniform` |
+| `target-encode` | `--target-encode a,b` | Replace a category with the target's mean for that category, computed out of fold |
 
 A raw datetime is close to useless to a model: it is one enormous integer, and
 the signal is almost always in its parts. A linear model cannot represent
 "high income *and* young" unless you hand it the product; a tree can, but only
 by spending depth on it.
 
-**`bin` is fitted, the rest are not.** Quantile edges are *learned* from the
-rows in front of them, so binning a whole file before splitting lets the test
-fold's distribution shape the bins. `export` puts `bin` inside
-`build_pipeline()` for that reason, and leaves the other four in `prepare()`.
+**`bin` and `target-encode` are fitted; the other four are not.** Quantile
+edges are *learned* from the rows in front of them, and a target encoding
+learns from the labels themselves. `export` puts both inside
+`build_pipeline()`, and leaves the deterministic four in `prepare()`.
+
+### Target encoding, and the trap it avoids
+
+Replacing a category with the target's mean is the strongest encoding
+available for high-cardinality columns, and the easiest way to destroy a
+model. Encoded naively, a unique customer id maps one-to-one onto its own
+label. Here is what that looks like on data containing **no signal at all** —
+600 random labels and 600 unique ids:
+
+| Encoding | Cross-validated accuracy | Truth |
+|---|---|---|
+| Naive (fit on everything) | **1.000** | 0.500 |
+| michi (out of fold) | 0.517 | 0.500 |
+
+The naive number is not a bug in the model; it is the model faithfully
+reporting that it memorised the answer key. michi encodes every training row
+using folds that did not contain it, so a column with no information stays a
+column with no information. A test asserts both halves of that table.
+
+michi ships its own encoder rather than scikit-learn's. sklearn deprecated the
+parameter that makes `TargetEncoder` reproducible in 1.9 and removes it in
+1.11; without it, two identical runs give different numbers. `export` writes
+the encoder class into the generated file, so the exported pipeline still
+imports nothing but pandas and scikit-learn — and you can read exactly what
+the encoding did.
 
 ```bash
 michi clean data/customers.csv --target purchased \
@@ -131,20 +157,39 @@ michi clean data/customers.csv --target purchased \
 
 Steps are ordered automatically, and the order is mechanical rather than
 editorial: drop → dedupe → cast → datepart → impute → clip → log → binarize →
-bin → interact → encode → scale.
+bin → interact → encode → target-encode → scale.
 
 Casting precedes `datepart` because reading parts off a timestamp requires a
 real timestamp. `interact` comes after the value transforms so it multiplies
 the final values rather than the raw ones. Each step can assume the previous
 ran.
 
-**Not included: target encoding.** Replacing a category with the target's mean
-is the highest-value and most dangerous encoding in tabular ML, and michi does
-not ship it yet. scikit-learn deprecated the parameter that makes
-`TargetEncoder` reproducible in 1.9 and removes it in 1.11; the replacement
-needs a newer scikit-learn than michi's floor. Shipping a step whose output
-changes between runs would break the reproducibility the rest of the toolbox
-rests on, so it waits for the floor to move.
+### The feature menu
+
+Run `michi clean` with no operation flags and, after the findings triage, it
+lists what your columns make possible — grouped by operation, with nothing
+preselected:
+
+```
+  Feature engineering — optional, and michi has no opinion here.
+  Nothing is preselected; space to pick, enter to move on.
+
+  [2/4]  Compress a long tail
+         These columns are skewed enough that a few large values dominate
+         every distance and every coefficient.
+  ? Which columns?
+   ◯ fare   (skew +6.87, 467 distinct)
+   ◯ salary (skew +0.31, 511 distinct)
+```
+
+An operation is offered only where the shape fits: `datepart` when there are
+timestamps, `log` when something is actually skewed, `target-encode` when a
+categorical column has more distinct values than one-hot can comfortably
+carry. An encyclopedic list of every operation against every column is noise
+for an expert and paralysis for a learner.
+
+michi lists shapes and stays quiet about worth. Whether a product term helps
+*your* problem is domain knowledge michi does not have.
 
 ## `michi apply` — executing
 
@@ -232,7 +277,7 @@ than none.
 | `--out`, `-o` | Where to write the recipe (default `michi.recipe.yaml`) |
 | `--target`, `-t` | Label column |
 | `--drop`, `--dedupe`, `--cast`, `--impute`, `--clip`, `--encode`, `--scale` | Cleaning operations, as above |
-| `--datepart`, `--log`, `--interact`, `--binarize`, `--bin` | Feature engineering, as above |
+| `--datepart`, `--log`, `--interact`, `--binarize`, `--bin`, `--target-encode` | Feature engineering, as above |
 | `--no-input` | Never prompt; use only the flags given |
 | `--sample` / `--full` / `--seed` | Sampling for large files |
 

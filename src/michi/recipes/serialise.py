@@ -37,14 +37,15 @@ _HEADER = """\
 # Steps run in order. Edit them freely: this file is read with a plain YAML
 # parser, so a hand-written recipe works exactly like a generated one.
 #
-# Operations: drop · dedupe · cast · impute · clip · encode · scale
+# Cleaning:    drop · dedupe · cast · impute · clip · encode · scale
+# Engineering: datepart · log · interact · binarize · bin · target-encode
 """
 
 _LEAKAGE_NOTE = """\
-# Note: impute, encode, and scale learn from the data they see. `michi apply`
-# fits them on whatever file you give it, which is fine for exploration. For
-# modelling, use `michi export` — the generated pipeline fits them inside the
-# train/test split, where they cannot leak.
+# Note: impute, encode, scale, bin, and target-encode learn from the data they
+# see. `michi apply` fits them on whatever file you give it, which is fine for
+# exploration. For modelling, use `michi export` — the generated pipeline fits
+# them inside the train/test split, where they cannot leak.
 """
 
 

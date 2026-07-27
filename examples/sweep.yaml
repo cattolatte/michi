@@ -1,11 +1,15 @@
 # A michi sweep plan: models × recipes × seeds.
 # Paths are relative to this file, so the sweep runs from anywhere.
 #
-#   michi sweep sweep.yaml --dry-run    # list the 12 cells
+#   michi sweep sweep.yaml --dry-run    # list the cells without running them
 #   michi sweep sweep.yaml              # run them, resuming if interrupted
+#
+# This plan is the one that produced the numbers in README.md: 12 cells in
+# 6.1s against the 600-row example dataset. Cells are cached by content hash,
+# so re-running it reuses all twelve instead of retraining them.
 
 data: data/customers.csv
-target: churned
+target: purchased
 folds: 5
 
 grid:

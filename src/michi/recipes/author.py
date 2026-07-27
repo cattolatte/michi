@@ -19,12 +19,13 @@ Design Principles
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 from michi.core.artifacts import ColumnKind, DatasetProfile, Severity
 from michi.core.errors import RecipeError
+from michi.recipes.apply import DEFAULT_DATE_PARTS
 from michi.recipes.model import Recipe, RecipeStep, SourceSchema
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -32,8 +33,10 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 __all__ = [
     "Choice",
+    "Opportunity",
     "Question",
     "command_for",
+    "feature_opportunities",
     "questions_for",
     "recipe_from_answers",
     "recipe_from_flags",
@@ -132,6 +135,7 @@ def recipe_from_flags(
     interact: Sequence[str] = (),
     binarize: Sequence[tuple[str, str]] = (),
     bin_: Sequence[tuple[str, str]] = (),
+    target_encode: Sequence[str] = (),
     target: str | None = None,
 ) -> Recipe:
     """Assemble a recipe entirely from command-line flags.
@@ -195,6 +199,17 @@ def recipe_from_flags(
                     "bins": int(count),
                     "strategy": strategy or "quantile",
                 },
+            )
+        )
+    if target_encode:
+        if not target:
+            msg = "--target-encode needs --target: the encoding is against a label"
+            raise RecipeError(msg)
+        steps.append(
+            RecipeStep(
+                "target-encode",
+                {"columns": list(target_encode), "target": target},
+                why="requested with --target-encode",
             )
         )
     if interact:
@@ -268,6 +283,8 @@ def command_for(recipe: Recipe, data_path: str) -> str:
             parts.extend(f"--bin {name}={count}:{strategy}" for name in columns)
         elif step.op == "interact":
             parts.append(f"--interact {','.join(columns)}")
+        elif step.op == "target-encode":
+            parts.append(f"--target-encode {','.join(columns)}")
     if drops:
         parts.insert(1, f"--drop {','.join(drops)}")
     if recipe.target:
@@ -675,7 +692,10 @@ _STEP_ORDER = {
     # values rather than the raw ones.
     "interact": 9,
     "encode": 10,
-    "scale": 11,
+    # Target encoding last among the encoders: it consumes categories, so
+    # anything that reshapes them must already have run.
+    "target-encode": 11,
+    "scale": 12,
 }
 
 
@@ -710,3 +730,131 @@ def _count(columns: tuple[str, ...]) -> str:
     if len(columns) == 1:
         return f"{columns[0]} is"
     return f"{len(columns)} columns are"
+
+
+# --- feature engineering: what this dataset makes possible ------------------
+
+
+@dataclass(frozen=True, slots=True)
+class Opportunity:
+    """One feature-engineering operation, and the columns it could apply to.
+
+    Not a recommendation. An opportunity says "these columns are the right
+    *shape* for this operation" — whether the operation is a good idea for
+    this problem is the user's call, which is why the wizard presents these as
+    a menu with nothing preselected.
+    """
+
+    op: str
+    label: str
+    detail: str
+    columns: tuple[str, ...]
+    params: Mapping[str, Any] = field(default_factory=dict)
+
+    def step(self, chosen: Sequence[str]) -> RecipeStep:
+        """Build the recipe step for the columns the user picked."""
+        return RecipeStep(
+            self.op,
+            {"columns": list(chosen), **dict(self.params)},
+            why=f"chosen in the feature menu: {self.label.lower()}",
+        )
+
+
+_SKEW_THRESHOLD = 1.0
+"""Absolute skew above which a log transform has something to compress."""
+
+_HIGH_CARDINALITY = 15
+"""Distinct values above which one-hot encoding stops being comfortable."""
+
+
+def feature_opportunities(profile: DatasetProfile) -> tuple[Opportunity, ...]:
+    """List the feature-engineering operations this dataset's shape allows.
+
+    Contextual menus only: `datepart` is offered when there are timestamps,
+    `log` when something is actually skewed. An encyclopedic list of every
+    operation against every column is noise for an expert and paralysis for a
+    learner.
+    """
+    target = profile.target
+    numeric = tuple(
+        column.name
+        for column in profile.columns
+        if column.kind is ColumnKind.NUMERIC and column.name != target
+    )
+    datetimes = tuple(
+        column.name
+        for column in profile.columns
+        if column.kind is ColumnKind.DATETIME and column.name != target
+    )
+    skewed = tuple(
+        column.name
+        for column in profile.columns
+        if column.kind is ColumnKind.NUMERIC
+        and column.name != target
+        and abs(float(column.stats.get("skew", 0.0) or 0.0)) >= _SKEW_THRESHOLD
+    )
+    wide_categoricals = tuple(
+        column.name
+        for column in profile.columns
+        if column.kind is ColumnKind.CATEGORICAL
+        and column.name != target
+        and column.unique > _HIGH_CARDINALITY
+    )
+
+    found: list[Opportunity] = []
+    if datetimes:
+        found.append(
+            Opportunity(
+                "datepart",
+                "Expand timestamps into parts",
+                "A raw datetime is one enormous integer. Year, month, and day "
+                "of week are what a model can actually use.",
+                datetimes,
+                {"parts": list(DEFAULT_DATE_PARTS)},
+            )
+        )
+    if skewed:
+        found.append(
+            Opportunity(
+                "log",
+                "Compress a long tail",
+                "These columns are skewed enough that a few large values "
+                "dominate every distance and every coefficient.",
+                skewed,
+                {"method": "log1p"},
+            )
+        )
+    if len(numeric) >= 2:
+        found.append(
+            Opportunity(
+                "interact",
+                "Multiply columns together",
+                "A linear model cannot represent 'high income and young' "
+                "unless it is handed the product. Pick two or more.",
+                numeric,
+                {"method": "product"},
+            )
+        )
+    if numeric:
+        found.append(
+            Opportunity(
+                "bin",
+                "Discretise into bins",
+                "Turns a continuous column into ranks. Learned from data, so "
+                "it is fitted inside the cross-validation fold.",
+                numeric,
+                {"bins": 5, "strategy": "quantile"},
+            )
+        )
+    if wide_categoricals and target:
+        found.append(
+            Opportunity(
+                "target-encode",
+                "Encode categories by target mean",
+                f"Too many distinct values for one-hot. Encoded out of fold "
+                f"against {target}, so no row sees its own label.",
+                wide_categoricals,
+                {"target": target},
+            )
+        )
+    return tuple(found)

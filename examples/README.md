@@ -11,7 +11,7 @@ Every file here comes from one run over one deliberately messy dataset —
 | [`recipe.yaml`](recipe.yaml) | `michi clean` | Cleaning decisions as a commented, hand-editable file |
 | [`pipeline.py`](pipeline.py) | `michi export` | The recipe compiled into standalone Python — imports pandas and scikit-learn, never michi |
 | [`benchmark.html`](benchmark.html) | `michi bench --report` | A model comparison with confidence intervals and significance verdicts — 6 KB, also fully offline |
-| [`sweep.yaml`](sweep.yaml) | hand-written | A grid of experiments: models × recipes × seeds |
+| [`sweep.yaml`](sweep.yaml) | `michi sweep` | A grid of experiments: models × recipes × seeds — 12 cells, verified against this dataset |
 
 ```bash
 michi inspect data/customers.csv --target purchased \
@@ -26,7 +26,29 @@ michi export recipe.yaml -o pipeline.py
 
 michi bench data/customers.csv --target purchased --recipe recipe.yaml \
   --models linear,rf,hist-gbm,knn --report benchmark.html
+
+michi sweep sweep.yaml
 ```
+
+The sweep runs the twelve cells in about six seconds and ranks them:
+
+```
+  12 ran  ·  0 reused  ·  6.1s
+
+  model    recipe   seed    score
+  ─────────────────────────────────
+  linear   recipe      1   0.8988
+  rf       recipe      1   0.8967
+  linear   recipe      2   0.8949
+  linear   recipe      0    0.892
+  …
+  tree     recipe      1   0.8256
+```
+
+Note what the seeds show: `linear` ranges from 0.8907 to 0.8988 across four
+seeds, and `rf` from 0.8779 to 0.8967. The gap between the best `linear` cell
+and the best `rf` cell is smaller than the spread within either — which is the
+whole reason `bench` refuses to declare a winner on this dataset.
 
 The dataset carries one instance of every problem michi detects — an empty
 column, a constant column, a mostly-missing column, duplicated and perfectly

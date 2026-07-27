@@ -322,4 +322,154 @@ def test_a_recipe_written_before_these_ops_still_loads() -> None:
 def test_an_unknown_op_names_the_ones_that_exist() -> None:
     """An older michi meeting a newer recipe fails loudly, not silently."""
     with pytest.raises(RecipeError, match="datepart"):
-        RecipeStep("target-encode", {"columns": ["city"]})
+        RecipeStep("polynomial", {"columns": ["city"]})
+
+
+# --- target encoding, and the leak it exists to avoid ----------------------
+
+
+def _noise_frame(rows: int = 600) -> pd.DataFrame:
+    """A high-cardinality id with no relationship to the label at all."""
+    rng = np.random.default_rng(0)
+    return pd.DataFrame(
+        {
+            "user": [f"u{i}" for i in range(rows)],
+            "label": (rng.random(rows) < 0.5).astype(int),
+        }
+    )
+
+
+def test_target_encoding_is_reproducible() -> None:
+    """Two identical runs must give two identical numbers.
+
+    scikit-learn's own TargetEncoder is not, on any version michi supports:
+    the parameter that made it deterministic is deprecated in 1.9 and removed
+    in 1.11. That is why michi owns this one.
+    """
+    from michi.recipes.encoders import encode_frame
+
+    frame = _noise_frame(200)
+    first = encode_frame(frame, ["user"], frame["label"])
+    second = encode_frame(frame, ["user"], frame["label"])
+    assert np.allclose(first, second)
+
+
+def test_target_encoding_does_not_memorise_the_label() -> None:
+    """The whole point: a pure-noise id must stay pure noise.
+
+    Encoded naively, a unique id maps one-to-one onto its own label and a
+    model scores a perfect 1.0 on data containing no signal whatsoever. Out
+    of fold, the same id predicts nothing, which is the truth.
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import cross_val_score
+    from sklearn.pipeline import Pipeline
+
+    from michi.recipes.encoders import build_target_encoder
+
+    frame = _noise_frame()
+    features, labels = frame[["user"]], frame["label"]
+
+    honest = cross_val_score(
+        Pipeline([("encode", build_target_encoder()), ("model", LogisticRegression())]),
+        features,
+        labels,
+        cv=5,
+    ).mean()
+
+    leaked_column = frame["user"].map(labels.groupby(frame["user"]).mean())
+    leaked = cross_val_score(
+        LogisticRegression(), leaked_column.to_frame(), labels, cv=5
+    ).mean()
+
+    assert leaked > 0.95, "the naive encoding should look perfect — that is the trap"
+    assert honest < 0.65, f"out-of-fold encoding leaked: scored {honest}"
+
+
+def test_an_unseen_category_falls_back_to_the_prior() -> None:
+    """A category the training folds never saw carries no information."""
+    from michi.recipes.encoders import build_target_encoder
+
+    encoder = build_target_encoder()
+    train = pd.DataFrame({"c": ["a", "a", "b", "b", "a", "b"]})
+    encoder.fit(train, pd.Series([1, 1, 0, 0, 1, 0]))
+    encoded = encoder.transform(pd.DataFrame({"c": ["never-seen"]}))
+    assert encoded[0][0] == pytest.approx(encoder.prior_)
+
+
+def test_target_encoding_needs_its_target_named() -> None:
+    """A recipe that cannot be reproduced from the file alone is not a recipe."""
+    with pytest.raises(RecipeError, match="target"):
+        _apply(RecipeStep("target-encode", {"columns": ["user"]}), _noise_frame(50))
+
+
+def test_exported_code_carries_the_encoder_rather_than_importing_michi() -> None:
+    """The generated file promises pandas and scikit-learn only."""
+    recipe = Recipe(
+        steps=(RecipeStep("target-encode", {"columns": ["user"], "target": "label"}),),
+        target="label",
+    )
+    code = export_recipe(recipe)
+    assert "class OutOfFoldTargetEncoder" in code
+    # Prose may mention michi; code may not import it. That distinction is
+    # the promise: the file runs after michi is uninstalled.
+    imports = [
+        line
+        for line in code.splitlines()
+        if line.startswith(("import ", "from ")) and "michi" in line
+    ]
+    assert imports == []
+
+
+# --- the feature menu ------------------------------------------------------
+
+
+def test_opportunities_are_offered_only_where_the_shape_fits(
+    messy_csv: Path,
+) -> None:
+    """Contextual menus: no timestamp, no datepart offer."""
+    from michi.core.io import load_table
+    from michi.inspection import profile_table
+    from michi.recipes import feature_opportunities
+
+    profile = profile_table(load_table(messy_csv), target="purchased")
+    offered = {item.op for item in feature_opportunities(profile)}
+    kinds = {column.kind.value for column in profile.columns}
+    if "datetime" not in kinds:
+        assert "datepart" not in offered
+    assert offered, "a dataset with numeric columns should offer something"
+
+
+def test_an_opportunity_builds_a_step_for_only_the_chosen_columns(
+    messy_csv: Path,
+) -> None:
+    """Selecting two of five columns must not quietly engineer all five."""
+    from michi.core.io import load_table
+    from michi.inspection import profile_table
+    from michi.recipes import feature_opportunities
+
+    profile = profile_table(load_table(messy_csv), target="purchased")
+    opportunity = next(
+        item for item in feature_opportunities(profile) if len(item.columns) >= 2
+    )
+    step = opportunity.step(list(opportunity.columns[:1]))
+    assert step.columns == opportunity.columns[:1]
+    assert step.why
+
+
+def test_the_menu_never_preselects(messy_csv: Path) -> None:
+    """michi lists shapes and stays quiet about worth.
+
+    An opportunity says "these columns are the right shape for this", never
+    "you should do this" — so nothing in it may carry a default that reads as
+    a recommendation.
+    """
+    from michi.core.io import load_table
+    from michi.inspection import profile_table
+    from michi.recipes import feature_opportunities
+
+    profile = profile_table(load_table(messy_csv), target="purchased")
+    for item in feature_opportunities(profile):
+        assert not hasattr(item, "default")
+        assert "should" not in item.detail.lower()
+        assert "recommend" not in item.detail.lower()
