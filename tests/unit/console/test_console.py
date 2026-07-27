@@ -268,10 +268,100 @@ def test_saved_context_reloads_into_a_session(tmp_path: Path) -> None:
 # --- banner ----------------------------------------------------------------
 
 
-def test_banner_is_short() -> None:
-    """One screen, no more."""
-    assert len(banner().splitlines()) < 15
+def test_banner_fits_one_screen() -> None:
+    """A banner longer than the terminal is a banner people scroll past."""
+    assert len(banner().splitlines()) < 24
     assert "michi" in banner()
+
+
+def test_banner_counts_come_from_the_registries() -> None:
+    """A typed count goes stale the first time someone adds a plugin."""
+    from michi.bench import available_models
+    from michi.console import inventory
+    from michi.explain.registry import explanations
+
+    lines = " ".join(inventory())
+    assert f"{len(available_models())} models" in lines
+    assert f"{len(explanations())} explanations" in lines
+
+
+def test_the_banner_never_costs_a_heavy_import() -> None:
+    """Startup stays instant: no registry consulted here pulls in sklearn."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from michi.console import banner; banner();"
+            "import sys; print('sklearn' in sys.modules, 'pandas' in sys.modules)",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "False False"
+
+
+def test_every_tip_is_a_single_readable_line() -> None:
+    """Tips are content; a tip with stray newlines renders as a ragged block."""
+    from michi.console.banner import tips
+
+    assert len(tips()) > 3
+    assert all("\n" not in item and item == item.strip() for item in tips())
+
+
+# --- the path --------------------------------------------------------------
+
+
+def test_every_stage_is_a_real_cli_verb() -> None:
+    """ADR-0003 constraint 4: a stage can never be a console-only capability.
+
+    If a stage named a command the shell does not have, `walk` would be the
+    only way to reach it, which is exactly the flag-parity rule michi holds
+    itself to.
+    """
+    from michi.cli.app import app
+    from michi.console import STAGES
+
+    verbs = {command.name for command in app.registered_commands if command.name}
+    assert {stage.command for stage in STAGES} <= verbs
+
+
+def test_path_marks_only_what_the_context_can_run() -> None:
+    """The marks are observed from context, not remembered from a sequence."""
+    console = Console(force_terminal=False, width=100)
+    with console.capture() as captured:
+        dispatch("path", Session(), console)
+    empty = captured.get()
+
+    console = Console(force_terminal=False, width=100)
+    with console.capture() as captured:
+        dispatch("path", Session(data="d.csv", target="y"), console)
+    loaded = captured.get()
+
+    assert loaded.count("✓") > empty.count("✓")
+
+
+def test_path_runs_nothing() -> None:
+    """`path` is a map. Printing it must not touch the filesystem."""
+    console = Console(force_terminal=False, width=100)
+    session = Session(data="does-not-exist.csv", target="y")
+    with console.capture() as captured:
+        dispatch("path", session, console)
+    assert session.history == ["path"]
+    assert "inspect" in captured.get()
+
+
+def test_walk_rejects_an_unknown_stage() -> None:
+    """A misspelled stage names the real ones instead of starting anyway."""
+    console = Console(force_terminal=False, width=100)
+    with console.capture() as captured:
+        dispatch("walk nonsense", Session(), console)
+    output = captured.get()
+    assert "no such stage" in output
+    assert "inspect" in output
 
 
 # --- project defaults ------------------------------------------------------

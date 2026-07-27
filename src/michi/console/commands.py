@@ -47,6 +47,18 @@ COMMANDS: tuple[ConsoleCommand, ...] = (
         "help", "show this help, or help on one command", "help [command]", "session"
     ),
     ConsoleCommand(
+        "path",
+        "list the stages of a project and the command for each",
+        "path",
+        "path",
+    ),
+    ConsoleCommand(
+        "walk",
+        "go stage by stage, asking before each — nothing runs unprompted",
+        "walk [stage]",
+        "path",
+    ),
+    ConsoleCommand(
         "use", "load a dataset into the session context", "use <path>", "context"
     ),
     ConsoleCommand("set", "set a context value", "set <key> <value>", "context"),
@@ -74,6 +86,9 @@ COMMANDS: tuple[ConsoleCommand, ...] = (
     ConsoleCommand(
         "export", "compile a recipe into pipeline code", "export [flags]", "verbs"
     ),
+    ConsoleCommand(
+        "sweep", "run a recorded experiment grid", "sweep <plan.yaml>", "verbs"
+    ),
     ConsoleCommand("report", "render recorded runs", "report [flags]", "verbs"),
     ConsoleCommand(
         "history",
@@ -86,7 +101,16 @@ COMMANDS: tuple[ConsoleCommand, ...] = (
     ConsoleCommand("exit", "leave the console (also: quit, Ctrl-D)", "exit", "session"),
 )
 
-_VERBS = {"inspect", "eval", "bench", "clean", "apply", "export", "report"}
+_VERBS = {
+    "inspect",
+    "eval",
+    "bench",
+    "clean",
+    "apply",
+    "export",
+    "report",
+    "sweep",
+}
 _SETTABLE = ("data", "target", "recipe", "runs_dir", "models", "seed", "cv")
 
 
@@ -232,6 +256,7 @@ def _handle_help(args: list[str], session: Session, console: Console) -> bool:
 
     console.print()
     for group, title in (
+        ("path", "道 — the path, if you want one"),
         ("context", "Context — what the verbs inherit"),
         ("verbs", "Verbs — the same commands as the shell"),
         ("session", "Session"),
@@ -432,9 +457,25 @@ def _handle_exit(args: list[str], session: Session, console: Console) -> bool:
     return False
 
 
+def _handle_path(args: list[str], session: Session, console: Console) -> bool:
+    from michi.console.path import render_path
+
+    render_path(session, console)
+    return True
+
+
+def _handle_walk(args: list[str], session: Session, console: Console) -> bool:
+    from michi.console.walk import run_walk
+
+    run_walk(session, console, start=args[0] if args else None)
+    return True
+
+
 _HANDLERS: dict[str, Callable[[list[str], Session, Console], bool]] = {
     "help": _handle_help,
     "?": _handle_help,
+    "path": _handle_path,
+    "walk": _handle_walk,
     "use": _handle_use,
     "set": _handle_set,
     "unset": _handle_unset,

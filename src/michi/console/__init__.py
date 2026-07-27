@@ -16,6 +16,7 @@ Design Principles
 
 from __future__ import annotations
 
+from michi.console.banner import banner, inventory, tip
 from michi.console.commands import (
     COMMANDS,
     ConsoleCommand,
@@ -23,16 +24,22 @@ from michi.console.commands import (
     expand,
     split_line,
 )
+from michi.console.path import STAGES, Stage, render_path
 from michi.console.session import Session
-from michi.console.shell import banner, run_console
+from michi.console.shell import run_console
 
 __all__ = [
     "COMMANDS",
+    "STAGES",
     "ConsoleCommand",
     "Session",
+    "Stage",
     "banner",
     "dispatch",
     "expand",
+    "inventory",
+    "render_path",
     "run_console",
     "split_line",
+    "tip",
 ]

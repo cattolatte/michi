@@ -1,0 +1,47 @@
+# Console tips, one shown per launch.
+#
+# A tip points at a capability the user would otherwise have to read the docs
+# to find. It never recommends a modelling decision — that is the user's, and
+# a banner is the worst possible place to influence one.
+
+- "Every verb takes --explain: it prints what a finding means and the options
+   practitioners choose between, never a recommendation."
+
+- "`path` lists the stages of a tabular ML project and the command for each.
+   You pick which to walk; michi runs none of it for you."
+
+- "`bench` always includes a dummy baseline, so \"is this any good?\" has an
+   answer instead of a vibe."
+
+- "Model differences are tested with the corrected resampled t-test: CV folds
+   share training data, and a naive t-test calls noise significant."
+
+- "Tab completes your own column names once a dataset is loaded. That is the
+   one thing a one-shot CLI can never do, and why this console exists."
+
+- "`history --export session.sh` turns everything you just ran into a
+   replayable script of one-shot commands."
+
+- "`michi.toml` holds your defaults for every command, not just the console.
+   `save` writes the current context into it."
+
+- "`export` compiles a recipe into pandas and scikit-learn code that does not
+   import michi. Delete michi tomorrow and the pipeline still runs."
+
+- "`inspect --fail-on high` exits non-zero on a serious finding, which turns
+   michi into a data-quality gate for CI."
+
+- "`clean` never modifies your data. It writes a recipe; `apply` produces a
+   new file, always at a path you name."
+
+- "Confidence intervals come from the bootstrap, and stay honest on large test
+   sets by rescaling an m-out-of-n resample rather than capping it."
+
+- "`sweep` caches by content hash, so an interrupted grid resumes instead of
+   re-running the cells it already finished."
+
+- "Nothing michi does touches the network. There is no account, no telemetry,
+   and no model download."
+
+- "`show runs` lists what you have recorded; `report runs/` renders it to HTML,
+   Markdown, or LaTeX."

@@ -30,11 +30,11 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.history import InMemoryHistory
 from rich.console import Console
 
-from michi import __version__
+from michi.console.banner import banner
 from michi.console.commands import COMMANDS, dispatch
 from michi.console.session import Session
 
-__all__ = ["MichiCompleter", "banner", "run_console"]
+__all__ = ["MichiCompleter", "run_console"]
 
 _SETTABLE = ("data", "target", "recipe", "runs_dir", "models", "seed", "cv")
 _SHOWABLE = ("context", "columns", "models", "runs")
@@ -50,27 +50,6 @@ _COMMON_FLAGS = [
     "--out",
     "--help",
 ]
-
-
-def banner() -> str:
-    """The console banner.
-
-    A 印 (*in*) — the vermilion seal a craftsman presses onto finished work —
-    rather than a wall of ASCII art. Six lines, most of them empty: the
-    restraint is the point, and a banner that fills the screen is a banner the
-    user learns to scroll past.
-    """
-    # Every line is indented the same amount: the kanji is double-width in
-    # some terminals and single in others, so hanging alignment off it would
-    # look correct on this machine and ragged on someone else's.
-    return f"""
-   [bold white on red] 道 [/]  [bold]michi[/] [dim]{__version__}[/]
-
-   [dim]automate implementation, never judgement[/]
-
-   [dim]help[/] [dim]lists commands[/] · [dim]use <file>[/] [dim]loads data[/]
-   [dim]Tab completes · Ctrl-D exits[/]
-"""
 
 
 def run_console(session: Session | None = None) -> int:
