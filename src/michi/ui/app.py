@@ -92,8 +92,44 @@ def build_app(runs_dir: Path) -> Any:
             for manifest in group.manifests:
                 if manifest.run_id == run_id:
                     template = environment.get_template("ui_run.html.jinja")
-                    return str(template.render(manifest=manifest, group=group))
+                    return str(
+                        template.render(
+                            manifest=manifest,
+                            group=group,
+                            charts=_charts(manifest),
+                        )
+                    )
         template = environment.get_template("ui_missing.html.jinja")
         return str(template.render(run_id=run_id, runs_dir=str(runs_dir)))
 
     return app
+
+
+def _charts(manifest: Any) -> dict[str, str | None]:
+    """Draw what this run recorded, and nothing it did not.
+
+    Charts are rendered from the manifest alone: a viewer that recomputed
+    anything could disagree with the terminal, and then two of michi's
+    surfaces would describe the same run differently. Every entry may be
+    ``None``, which the template reads as "do not draw this".
+    """
+    from michi.report.charts import (
+        calibration_chart,
+        confusion_chart,
+        interval_chart,
+        slice_chart,
+    )
+
+    details = manifest.details or {}
+    rows = [
+        (metric.name, metric.value, metric.ci_low, metric.ci_high)
+        for metric in manifest.metrics
+    ]
+    return {
+        "intervals": interval_chart(rows) if rows else None,
+        "confusion": confusion_chart(
+            list(details.get("classes") or []), list(details.get("confusion") or [])
+        ),
+        "calibration": calibration_chart(details.get("calibration")),
+        "slices": slice_chart(list(details.get("slices") or [])),
+    }

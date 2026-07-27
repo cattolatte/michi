@@ -52,6 +52,13 @@
   .back { color: var(--muted); text-decoration: none; font-size: .88rem; }
   footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
            color: var(--muted); font-size: .8rem; }
+  .charts { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; }
+  .chart { padding: 1rem 1.1rem; }
+  .chart.wide { width: 100%; }
+  .chart figcaption { font-weight: 600; margin-bottom: .6rem; }
+  .chart svg { display: block; max-width: 100%; height: auto; }
+  .small { font-size: .82rem; margin: .6rem 0 0; max-width: 34ch; }
+  .chart.wide .small { max-width: none; }
 </style>
 </head>
 <body>

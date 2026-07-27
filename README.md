@@ -88,7 +88,7 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi` | Interactive console with context-aware completion; `path` maps the stages, `walk` asks its way through them | **v0.5** · **v1.1** |
 | `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds, with resume | **v0.6** |
 | `michi report runs/` | HTML · Markdown · LaTeX reports over recorded runs | **v0.3** |
-| `michi ui` | Local, read-only viewer over your runs | **v0.7** |
+| `michi ui` | Local, read-only viewer: confusion matrix, calibration curve, intervals, subgroup gaps | **v0.7** · **v1.7** |
 | `michi plugins` | Add your own models and model loaders | **v0.8** |
 
 <br>

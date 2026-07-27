@@ -28,6 +28,38 @@
   </table>
 </div>
 
+
+{% if charts.confusion or charts.calibration or charts.intervals %}
+<h2>Charts</h2>
+<div class="charts">
+  {% if charts.intervals %}
+  <figure class="card chart">
+    <figcaption>Metrics, with intervals</figcaption>
+    {{ charts.intervals|safe }}
+    <p class="muted small">A wide bar is a metric this dataset could not pin
+    down. Two metrics whose bars overlap were not separated by this data.</p>
+  </figure>
+  {% endif %}
+  {% if charts.confusion %}
+  <figure class="card chart">
+    <figcaption>Confusion matrix</figcaption>
+    {{ charts.confusion|safe }}
+    <p class="muted small">Shaded by share of each true class, so a rare class
+    that is always wrong is still visible.</p>
+  </figure>
+  {% endif %}
+  {% if charts.calibration %}
+  <figure class="card chart">
+    <figcaption>Calibration{% if manifest.details.get("ece") is not none %}
+      <span class="muted">· ECE {{ "%.4g"|format(manifest.details["ece"]) }}</span>{% endif %}</figcaption>
+    {{ charts.calibration|safe }}
+    <p class="muted small">The dashed line is perfect. Below it the model is
+    overconfident — it says 0.9 and is right less often than that.</p>
+  </figure>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if manifest.checks %}
 <h2>Checks</h2>
 <div class="card"><table><tbody>
@@ -40,6 +72,14 @@
 
 {% if manifest.details.get("slices") %}
 <h2>Slices</h2>
+{% if charts.slices %}
+<figure class="card chart wide">
+  <figcaption>Score by subgroup, worst first</figcaption>
+  {{ charts.slices|safe }}
+  <p class="muted small">An average hides the group a model fails. The worst
+  group is coloured because it is the one worth looking at.</p>
+</figure>
+{% endif %}
 <div class="card"><table>
   <thead><tr><th>column</th><th>value</th><th class="num">rows</th><th class="num">score</th></tr></thead>
   <tbody>

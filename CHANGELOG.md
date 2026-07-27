@@ -6,6 +6,44 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-07-27
+
+The viewer finally shows what a terminal cannot draw.
+
+### Added
+- **Charts in `michi ui`.** The run detail page now draws four things from the
+  manifest it already had: metrics with their confidence intervals, a
+  confusion matrix, a calibration curve with its expected calibration error,
+  and per-subgroup scores sorted worst-first.
+
+  The data was recorded from v0.2 onward and simply never rendered — the
+  viewer was 99 lines listing runs. A terminal can rank models and print a
+  confusion table; it cannot draw a reliability diagram, which is the whole
+  reason the viewer exists.
+
+  Every chart is a rendering and computes nothing, so the viewer can never
+  disagree with the terminal about the same run. They are inline SVG — no
+  plotting library at render time, no CDN, no JavaScript — and a chart that
+  cannot be drawn honestly is not drawn: more than ten classes shows the
+  table instead.
+- A stage map in `michi --help`, naming each verb by the kanji for what it
+  does. `path` in the console draws the full table with the current context's
+  readiness marked.
+
+### Fixed
+- **Charts were invisible in the viewer.** They shipped with a hardcoded
+  near-black for text and rules, which is unreadable on the viewer's dark
+  background. Text and rules now inherit the page's own colour, so the same
+  chart is legible in the dark viewer and a light printed report. A test
+  asserts it for every chart.
+- Confusion-matrix shading is per row rather than per matrix. Shading by the
+  whole matrix makes the majority class the only visible thing on an
+  imbalanced problem, which hides exactly the failure the chart is read to
+  find.
+- Subgroup and metric labels no longer collide with their own bars.
+- The CLI module docstring still said the console "will become" available in
+  v0.5, two years of releases after it shipped.
+
 ## [1.6.0] — 2026-07-27
 
 ### Added

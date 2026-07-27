@@ -8,8 +8,9 @@ Design Principles
   sugar over flags, never the only path.
 - Command modules are imported eagerly only when cheap; heavy domain imports
   happen inside the command body so ``michi --version`` stays instant.
-- Bare ``michi`` will become the interactive console in v0.5; until then it
-  shows help.
+- Bare ``michi`` opens the interactive console when a terminal is attached,
+  and prints help when it is not, so a piped or scripted invocation never
+  hangs waiting for input.
 """
 
 from __future__ import annotations
@@ -33,10 +34,23 @@ from michi.cli.sweep_cmd import sweep_command
 from michi.cli.tune_cmd import tune_command
 from michi.cli.ui_cmd import ui_command
 
+# Typer reflows an epilog, so this is one flowing line rather than a grid:
+# a multi-line map renders correctly at one terminal width and ragged at every
+# other. `path` in the console draws the real table, with the current
+# context's readiness marked.
+_EPILOG = (
+    "[dim]道 the path —[/] "
+    "[bold]見[/] inspect · [bold]整[/] clean · [bold]比[/] bench · "
+    "[bold]確[/] eval · [bold]探[/] tune · [bold]作[/] fit · "
+    "[bold]記[/] report · [bold]出[/] export      "
+    "[dim]Run `michi` with no arguments for the console.[/]"
+)
+
 app = typer.Typer(
     name="michi",
     help="Michi (道) — a local-first ML workbench. "
     "Automate implementation, never judgement.",
+    epilog=_EPILOG,
     invoke_without_command=True,
     add_completion=False,
     rich_markup_mode="rich",
