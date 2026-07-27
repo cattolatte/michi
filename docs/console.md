@@ -10,7 +10,7 @@ Run `michi` with no arguments.
   ██║ ╚═╝ ██║██║╚██████╗██║  ██║██║
   ╚═╝     ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝
 
-        =[ michi v1.1.0  ·  a local-first ML workbench                     ]
+        =[ michi v1.2.0  ·  a local-first ML workbench                     ]
 + -- --=[ 9 verbs  ·  14 models  ·  12 recipe ops  ·  26 explanations      ]
 + -- --=[ 19 console commands  ·  no account, no telemetry, no network call]
 

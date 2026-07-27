@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-07-27
+
 ### Added
 - **`bench --explain` now explains your own numbers**, not statistics in
   general. It states what the features bought over the dummy baseline, why

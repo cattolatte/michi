@@ -21,6 +21,7 @@ edges, in plugins, rather than in the core.
 | **v0.8** | plugins | Entry-point discovery for models and model loaders, with a published compatibility suite plugin authors run themselves. |
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
+| **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
 
 ## Known gaps
 
