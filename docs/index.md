@@ -8,6 +8,8 @@ judgement call to you.
 
 ## Start here
 
+- [Quickstart](quickstart.md) — one messy CSV to a compared, reported model in
+  fifteen minutes.
 - [Philosophy](philosophy.md) — the principles every decision follows, and the
   permanent non-goals.
 - [Roadmap](roadmap.md) — which verb ships when, and the artifacts they produce.

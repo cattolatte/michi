@@ -18,6 +18,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Quickstart: quickstart.md
   - Commands:
       - inspect: inspect.md
       - eval: eval.md

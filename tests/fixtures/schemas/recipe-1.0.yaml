@@ -1,0 +1,50 @@
+# michi recipe — cleaning decisions you made, as a file you own.
+#
+# Apply it:   michi apply recipe-1.0.yaml data.csv -o clean.parquet
+# Compile it: michi export recipe-1.0.yaml -o pipeline.py
+#
+# Steps run in order. Edit them freely: this file is read with a plain YAML
+# parser, so a hand-written recipe works exactly like a generated one.
+#
+# Operations: drop · dedupe · cast · impute · clip · encode · scale
+
+schema_version: "1.0"
+michi_version: "1.0.0"
+created_at: "2026-07-27T00:00:00Z"
+target: purchased
+
+# The data this recipe was written against. Applying it to
+# something with different columns fails loudly, on purpose.
+source:
+  path: "data/customers.csv"
+  sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  n_rows: 120
+  columns:
+    age: numeric
+    region: categorical
+
+# Note: impute, encode, and scale learn from the data they see. `michi apply`
+# fits them on whatever file you give it, which is fine for exploration. For
+# modelling, use `michi export` — the generated pipeline fits them inside the
+# train/test split, where they cannot leak.
+steps:
+  - op: drop
+    columns: ["notes"]
+    why: "column was entirely missing"
+  - op: cast
+    columns: ["amount"]
+    to: numeric
+  - op: impute
+    columns: ["salary"]
+    strategy: median
+  - op: clip
+    columns: ["fare"]
+    lower_quantile: 0.01
+    upper_quantile: 0.99
+  - op: encode
+    columns: ["region"]
+    method: onehot
+  - op: scale
+    columns: ["age"]
+    method: standard
+  - op: dedupe

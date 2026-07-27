@@ -211,14 +211,29 @@ def test_deterministic_recipes_carry_no_leakage_note() -> None:
 # --- serialisation ---------------------------------------------------------
 
 
-def test_emitted_yaml_carries_comments() -> None:
+def test_emitted_yaml_carries_guidance_comments() -> None:
     """Recipes are meant to be read, so michi writes comments into them."""
     recipe = Recipe(
         steps=(RecipeStep("drop", {"columns": ["id"]}, why="looked like a key"),)
     )
     text = dumps_recipe(recipe)
-    assert "# looked like a key" in text
     assert "michi recipe" in text
+    assert "michi apply" in text
+
+
+def test_the_reason_for_a_step_round_trips(tmp_path: Path) -> None:
+    """`why` is a field, not a comment.
+
+    A comment would read just as well and be lost the moment the recipe was
+    loaded again — and the reason a column was dropped is exactly the part
+    nobody can reconstruct six months later.
+    """
+    recipe = Recipe(
+        steps=(RecipeStep("drop", {"columns": ["id"]}, why="looked like a key"),)
+    )
+    path = tmp_path / "recipe.yaml"
+    write_recipe(recipe, path)
+    assert load_recipe(path).steps[0].why == "looked like a key"
 
 
 def test_emitted_yaml_warns_about_fitted_steps() -> None:

@@ -49,6 +49,10 @@ pip install michi
 michi inspect data.csv --target label --explain
 ```
 
+New here? The [quickstart](docs/quickstart.md) takes one messy CSV to a
+compared, reported model in fifteen minutes, and asks for no commitment along
+the way.
+
 Optional extras: `michi[bench]` (XGBoost, LightGBM, CatBoost), `michi[excel]`,
 `michi[shap]`, `michi[ui]`.
 
@@ -68,6 +72,7 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi sweep sweep.yaml` | Reproducible experiment grids: models × recipes × seeds, with resume | **v0.6** |
 | `michi report runs/` | HTML · Markdown · LaTeX reports over recorded runs | **v0.3** |
 | `michi ui` | Local, read-only viewer over your runs | **v0.7** |
+| `michi plugins` | Add your own models and model loaders | **v0.8** |
 
 <br>
 
@@ -206,6 +211,16 @@ uv run pytest
 All four gates run in CI on Linux, macOS, and Windows, against Python 3.11
 and 3.13. [CONTRIBUTING.md](CONTRIBUTING.md) covers what is most welcome, and
 what michi says no to.
+
+## 約束 — the promise
+
+From 1.0, the artifact schemas, the CLI surface, and the plugin contract are
+frozen under semantic versioning
+([ADR-0002](docs/adr/0002-freeze-the-public-surface.md)). A regression test
+reads committed 1.0 artifacts on every CI run, so an artifact michi writes
+today stays readable — that is enforced, not promised.
+
+Growth from here happens at the edges, in plugins, rather than in the core.
 
 <br>
 

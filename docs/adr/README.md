@@ -10,3 +10,4 @@ Decision / Consequences sections.
 ## Index
 
 - [ADR-0001](0001-toolbox-not-workflow.md) — Michi is a toolbox, not a workflow
+- [ADR-0002](0002-freeze-the-public-surface.md) — Freeze the public surface at 1.0

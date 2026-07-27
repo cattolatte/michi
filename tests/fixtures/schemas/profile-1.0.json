@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "michi_version": "1.0.0",
+  "created_at": "2026-07-27T00:00:00Z",
+  "source": {
+    "path": "data/customers.csv",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 7340,
+    "format": "csv",
+    "total_rows": 120,
+    "sampled": false,
+    "sample_rows": null,
+    "seed": null
+  },
+  "n_rows": 120,
+  "n_columns": 2,
+  "duplicate_rows": 1,
+  "target": "region",
+  "columns": [
+    {
+      "name": "age",
+      "kind": "numeric",
+      "dtype": "int64",
+      "count": 118,
+      "missing": 2,
+      "unique": 45,
+      "stats": {
+        "mean": 41.6,
+        "min": 20.0,
+        "max": 64.0,
+        "skew": 0.12
+      },
+      "top_values": [],
+      "histogram": [
+        [
+          20.0,
+          42.0,
+          60
+        ],
+        [
+          42.0,
+          64.0,
+          58
+        ]
+      ]
+    },
+    {
+      "name": "region",
+      "kind": "categorical",
+      "dtype": "object",
+      "count": 120,
+      "missing": 0,
+      "unique": 3,
+      "stats": {},
+      "top_values": [
+        [
+          "north",
+          60
+        ],
+        [
+          "south",
+          40
+        ],
+        [
+          "east",
+          20
+        ]
+      ],
+      "histogram": []
+    }
+  ],
+  "findings": [
+    {
+      "kind": "missing",
+      "severity": "warn",
+      "columns": [
+        "age"
+      ],
+      "summary": "1.7% missing (2 of 120)",
+      "metrics": {
+        "pct": 1.667,
+        "count": 2
+      }
+    }
+  ]
+}

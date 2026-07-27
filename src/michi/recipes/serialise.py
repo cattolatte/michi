@@ -101,11 +101,15 @@ def dumps_recipe(recipe: Recipe, *, name: str = "michi.recipe.yaml") -> str:
     if not recipe.steps:
         lines[-1] = "steps: []"
     for step in recipe.steps:
-        if step.why:
-            lines.append(f"  # {step.why}")
         lines.append(f"  - op: {step.op}")
         for key, value in step.params.items():
             lines.append(f"    {key}: {_render(value)}")
+        if step.why:
+            # `why` is a field, not a comment. A comment would read just as
+            # well and be lost the moment the recipe was loaded again — and
+            # the reason a column was dropped is the part nobody can
+            # reconstruct six months later.
+            lines.append(f"    why: {_render(step.why)}")
     lines.append("")
     return "\n".join(lines)
 

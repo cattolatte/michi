@@ -6,6 +6,36 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-27
+
+The public surface is frozen.
+
+### Added
+- **A quickstart** taking one messy CSV to a compared, reported model in
+  fifteen minutes — the page that decides whether michi is worth adopting.
+- **[ADR-0002](docs/adr/0002-freeze-the-public-surface.md)** records exactly
+  what is now public API under semantic versioning: the profile, run manifest,
+  and recipe schemas (all 1.0); the verb names, flags, and exit codes; the
+  plugin entry-point groups and contract; and each package's `__all__`.
+  Terminal layout, report styling, explanation prose, and finding thresholds
+  are deliberately *not* frozen.
+- **Schema-stability tests** that read committed 1.0 fixtures of all three
+  artifact types on every CI run, execute every frozen recipe operation, and
+  compile a 1.0 recipe to code. A promise nobody tests is a hope.
+
+### Fixed
+- A recipe step's `why` — the reason a column was dropped — was written as a
+  YAML comment and silently lost on reload. It is now a field and round-trips.
+  That reason is exactly the part nobody can reconstruct six months later, and
+  the freeze tests are what caught it.
+
+### Notes
+- The freeze is what makes the toolbox claim real: a verb adopted today
+  behaves the same next year, which is the only basis on which anyone puts
+  michi in a pipeline.
+- Everything on the roadmap has now shipped: `inspect`, `eval`, `bench`,
+  `report`, `clean`/`apply`/`export`, the console, `sweep`, `ui`, and plugins.
+
 ## [0.8.0] — 2026-07-27
 
 The plugin surface.
