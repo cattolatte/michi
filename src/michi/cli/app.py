@@ -25,13 +25,16 @@ from rich.console import Console
 from michi import __version__
 from michi.cli.bench_cmd import bench_command
 from michi.cli.clean_cmd import apply_command, clean_command, export_command
+from michi.cli.diff_cmd import diff_command
 from michi.cli.ensemble_cmd import ensemble_command
+from michi.cli.errors_cmd import errors_command
 from michi.cli.eval_cmd import eval_command
 from michi.cli.fit_cmd import fit_command, predict_command
 from michi.cli.inspect_cmd import inspect_command
 from michi.cli.report_cmd import report_command
 from michi.cli.split_cmd import split_command
 from michi.cli.sweep_cmd import sweep_command
+from michi.cli.threshold_cmd import threshold_command
 from michi.cli.tune_cmd import tune_command
 from michi.cli.ui_cmd import ui_command
 
@@ -41,7 +44,7 @@ from michi.cli.ui_cmd import ui_command
 # context's readiness marked.
 _EPILOG = (
     "[dim]道 the path —[/] "
-    "[bold]見[/] inspect · [bold]整[/] clean · [bold]比[/] bench · "
+    "[bold]見[/] inspect · [bold]較[/] diff · [bold]整[/] clean · [bold]比[/] bench · "
     "[bold]分[/] split · [bold]確[/] eval · [bold]探[/] tune · [bold]作[/] fit · "
     "[bold]記[/] report · [bold]出[/] export      "
     "[dim]Run `michi` with no arguments for the console.[/]"
@@ -65,9 +68,12 @@ app.command("report")(report_command)
 app.command("clean")(clean_command)
 app.command("apply")(apply_command)
 app.command("export")(export_command)
+app.command("diff")(diff_command)
 app.command("split")(split_command)
 app.command("ensemble")(ensemble_command)
 app.command("tune")(tune_command)
+app.command("errors")(errors_command)
+app.command("threshold")(threshold_command)
 app.command("fit")(fit_command)
 app.command("predict")(predict_command)
 app.command("sweep")(sweep_command)

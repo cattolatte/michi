@@ -22,6 +22,7 @@ edges, in plugins, rather than in the core.
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
 | **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
+| **v1.10** | `diff` · `threshold` · `errors` | Drift against a baseline; the decision cutoff; the rows behind the score. **Shipped.** |
 | **v1.9** | `split` + importance | Grouped and time-based splits; permutation importance through the predict protocol. **Shipped.** |
 | **v1.8** | bayesian search | `tune --strategy bayes` under ADR-0004. **Shipped.** |
 | **v1.7** | charts in `ui` | Confusion matrix, calibration curve, metric intervals, and subgroup scores, drawn from the manifests michi already wrote. **Shipped.** |

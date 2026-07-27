@@ -80,6 +80,9 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers, leakage suspects — every finding explained | **v0.1** |
 | `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, subgroup gaps | **v0.2** |
 | `michi bench … --models rf,linear,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | **v0.3** |
+| `michi diff baseline.json today.csv` | Has the data changed? Schema, missingness, distribution shift, new categories | **v1.10** |
+| `michi threshold model.pkl data.csv` | What every decision cutoff buys — 0.5 is a default nobody chose | **v1.10** |
+| `michi errors model.pkl data.csv` | The rows behind the score, confident mistakes first | **v1.10** |
 | `michi split data.csv --group customer` | Train/test splits that respect entities and time — where leakage actually hides | **v1.9** |
 | `michi tune … --model hist-gbm` | Hyperparameter search, scored on folds the search never saw | **v1.4** |
 | `michi ensemble … --models linear,rf,xgb` | Stack or vote several models — and see whether it actually beat the best one | **v1.6** |

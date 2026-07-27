@@ -6,6 +6,45 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.10.0] — 2026-07-27
+
+Three questions michi could not answer, all of which someone was answering by
+hand.
+
+### Added
+- **`michi diff`** — has this data changed? Compares two datasets, or a
+  dataset against a committed `profile.json`, reporting removed and added
+  columns, type changes, missingness, distribution shift, new categories, and
+  row-count collapse.
+
+  The profile artifact was always half of this: `inspect` has written schemas
+  and distributions since v0.1, so a drift check needs no new measurement —
+  which is why it belongs in michi rather than in a monitoring service michi
+  would have to run. Severity follows *breakage*, not effect size: a removed
+  column is high whatever the distributions did; a new column is information,
+  because a fitted model never asked for it. Shift is measured in baseline
+  standard deviations so the threshold means the same thing for dollars and
+  millimetres. `--fail-on high` makes it a nightly CI gate.
+
+- **`michi threshold`** — the decision cutoff nobody chose. A classifier emits
+  a probability and almost every tool turns it into a label at 0.5 silently.
+  On imbalanced data, or when a miss costs more than a false alarm, that is
+  simply the wrong number.
+
+  michi prints precision, recall, F1, the errors, and the cost at every
+  cutoff, and marks the best one *for an objective the user named*. With
+  `--cost fn=10,fp=1` on the example dataset the best cutoff is **0.16, not
+  0.50** — and 0.50 costs 195 against 79. Which trade to take depends on what
+  a miss costs, which michi has no way to know, so it has no default beyond
+  weighing the two errors equally.
+
+- **`michi errors`** — the rows behind the score. Lists the mistakes ordered
+  by how confident the model was, because a confident error is a mislabelled
+  row, a leak, or a region the features do not describe, while an unsure one
+  is the model behaving correctly at the edge. Reports the subgroups where
+  errors concentrate, and writes every mistake to a file with `--out`.
+  Regression targets are ranked by residual instead.
+
 ## [1.9.0] — 2026-07-27
 
 ### Added
