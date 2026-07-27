@@ -6,6 +6,36 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`michi.toml` now reaches every command**, not only the console. The
+  documented precedence — flags > `michi.toml` > built-in — was previously
+  true only inside the console, which made the documentation wrong for every
+  shell user. `michi inspect`, `bench`, `clean`, and `report` now run with no
+  arguments in a configured project.
+- **`--recipe` on `eval`**, which the documentation had promised. Only the
+  recipe's deterministic steps run: imputers in a recipe were fitted for
+  training, and re-fitting them on the evaluation set would quietly change
+  what is being measured.
+- A PyPI publishing workflow using trusted publishing, which re-runs every
+  gate against the tagged commit and refuses to publish if the tag and the
+  package version disagree.
+
+### Changed
+- The distribution is **`michi-ml`** on PyPI, because `michi` was already
+  taken. The command and the import are both still `michi`.
+- A *configured* target is a hint, not a command: running against data that
+  lacks it prints a note and continues, rather than failing a run the user did
+  not misconfigure. A typed `--target` that is missing still fails loudly.
+
+### Fixed
+- Error messages naming an extra were rendered as terminal markup, so
+  `pip install 'michi-ml[bench]'` reached users as `pip install 'michi-ml'` —
+  an install command that silently does the wrong thing. Messages are now
+  rendered verbatim, and a test asserts the brackets survive.
+- The install command is built from one constant, and a test fails if any
+  message hardcodes the package name — which immediately caught a stale hint
+  in the Excel loader.
+
 ## [1.0.0] — 2026-07-27
 
 The public surface is frozen.

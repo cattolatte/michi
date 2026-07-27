@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "michi"
+name = "michi-ml"
 version = "1.0.0"
 description = "A local-first ML workbench: independent CLI tools that automate the repetitive implementation work of machine learning — never the judgement."
 readme = "README.md"
@@ -67,7 +67,11 @@ dev = [
 michi = "michi.cli.app:app"
 
 [project.urls]
+Homepage = "https://github.com/cattolatte/michi"
 Repository = "https://github.com/cattolatte/michi"
+Documentation = "https://github.com/cattolatte/michi/blob/main/docs/quickstart.md"
+Changelog = "https://github.com/cattolatte/michi/blob/main/CHANGELOG.md"
+Issues = "https://github.com/cattolatte/michi/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/michi"]

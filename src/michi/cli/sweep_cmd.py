@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from michi.cli.errors import fail
 from michi.core.errors import MichiError
 
 __all__ = ["sweep_command"]
@@ -54,7 +55,7 @@ def sweep_command(
 
         plan = load_plan(plan_file)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     cells = plan.cells()
@@ -76,7 +77,7 @@ def sweep_command(
     try:
         result = run_sweep(plan, sweep_dir=sweep_dir, force=force, progress=progress)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     console.print()

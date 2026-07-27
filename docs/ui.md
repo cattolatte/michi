@@ -3,7 +3,7 @@
 Browse your recorded runs in a local, read-only web view.
 
 ```bash
-pip install 'michi[ui]'
+pip install 'michi-ml[ui]'
 michi ui              # serves http://127.0.0.1:8731 and opens a browser
 michi ui runs/sweep --port 9000 --no-open
 ```

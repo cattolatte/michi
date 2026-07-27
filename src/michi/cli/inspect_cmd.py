@@ -19,6 +19,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from michi.cli.context import resolve_defaults
+from michi.cli.errors import fail
 from michi.core.artifacts import DatasetProfile, Severity
 from michi.core.errors import MichiError
 from michi.core.io import DEFAULT_SAMPLE_ROWS, load_table
@@ -30,12 +32,13 @@ __all__ = ["inspect_command"]
 
 def inspect_command(
     path: Annotated[
-        Path,
+        Path | None,
         typer.Argument(
-            help="Dataset to profile (.csv, .tsv, .parquet, or .xlsx).",
+            help="Dataset to profile (.csv, .tsv, .parquet, or .xlsx). "
+            "Falls back to `data` in michi.toml.",
             show_default=False,
         ),
-    ],
+    ] = None,
     target: Annotated[
         str | None,
         typer.Option(
@@ -72,8 +75,8 @@ def inspect_command(
         typer.Option("--full", help="Read every row, however large the file."),
     ] = False,
     seed: Annotated[
-        int, typer.Option("--seed", help="Seed for reproducible sampling.")
-    ] = 0,
+        int | None, typer.Option("--seed", help="Seed for reproducible sampling.")
+    ] = None,
     max_columns: Annotated[
         int | None,
         typer.Option("--max-columns", help="Truncate the column table after N rows."),
@@ -99,11 +102,17 @@ def inspect_command(
     to do about it is your call.
     """
     console = Console()
+    defaults = resolve_defaults()
+    seed = defaults.number("seed", seed) or 0
     try:
-        table = load_table(path, sample_rows=sample, full=full, seed=seed)
-        profile = profile_table(table, target=target)
+        resolved = defaults.required_data(path)
+        table = load_table(resolved, sample_rows=sample, full=full, seed=seed)
+        resolved_target, note = defaults.target_for(target, table.frame.columns)
+        if note:
+            console.print(f"  [dim]{note}[/]")
+        profile = profile_table(table, target=resolved_target)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     render_profile(

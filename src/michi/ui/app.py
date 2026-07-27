@@ -20,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from michi.core.errors import ReportError
+from michi.core.errors import ReportError, install_hint
 
 __all__ = ["build_app"]
 
@@ -49,7 +49,7 @@ def build_app(runs_dir: Path) -> Any:
         from fastapi.responses import HTMLResponse
     except ImportError as err:
         msg = (
-            "the local viewer requires the ui extra: pip install 'michi[ui]'. "
+            f"the local viewer requires the ui extra: {install_hint('ui')}. "
             "Everything it shows is also available from `michi report`."
         )
         raise ReportError(msg) from err

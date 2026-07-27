@@ -20,7 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Final
 
-from michi.core.errors import RunError
+from michi.core.errors import RunError, install_hint
 
 __all__ = ["ModelEntry", "available_models", "build_model", "model_entry"]
 
@@ -203,7 +203,7 @@ def _catboost(task: str, seed: int) -> Any:
 
 def _missing_extra(package: str, extra: str) -> RunError:
     return RunError(
-        f"{package} is not installed. Install it with: pip install 'michi[{extra}]'"
+        f"{package} is not installed. Install it with: {install_hint(extra)}"
     )
 
 

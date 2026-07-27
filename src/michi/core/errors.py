@@ -19,13 +19,40 @@ Design Principles
 from __future__ import annotations
 
 __all__ = [
+    "DISTRIBUTION",
     "DataError",
     "MichiError",
     "ModelError",
     "RecipeError",
     "ReportError",
     "RunError",
+    "install_hint",
 ]
+
+
+DISTRIBUTION = "michi-ml"
+"""The name michi is distributed under.
+
+The import name and the command are both ``michi``; the distribution needed a
+different name because ``michi`` was already taken on PyPI. Error messages
+tell users what to *install*, so they must use this — one constant, so a
+rename can never leave a message pointing at a package that does not exist.
+"""
+
+
+def install_hint(extra: str | None = None) -> str:
+    """Return the exact command that installs michi, or one of its extras.
+
+    Examples
+    --------
+    >>> install_hint("bench")
+    "pip install 'michi-ml[bench]'"
+    >>> install_hint()
+    'pip install michi-ml'
+    """
+    if extra is None:
+        return f"pip install {DISTRIBUTION}"
+    return f"pip install '{DISTRIBUTION}[{extra}]'"
 
 
 class MichiError(Exception):

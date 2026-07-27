@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 from michi.core.artifacts import SourceInfo
-from michi.core.errors import DataError
+from michi.core.errors import DataError, install_hint
 from michi.core.hashing import hash_file
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -273,9 +273,7 @@ def _read_excel(path: Path) -> tuple[pd.DataFrame, int, bool]:
     try:
         frame = pd.read_excel(path)
     except ImportError as err:
-        msg = (
-            "reading spreadsheets requires the excel extra: pip install 'michi[excel]'"
-        )
+        msg = f"reading spreadsheets requires the excel extra: {install_hint('excel')}"
         raise DataError(msg) from err
     except Exception as err:  # third-party failure boundary
         msg = f"could not read {path.name} as a spreadsheet: {err}"

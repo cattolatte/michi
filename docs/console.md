@@ -127,6 +127,19 @@ It is found by searching upward from the working directory, so it works from a
 subdirectory. Check it into git: it is how a team shares "the target column is
 `purchased`" without anyone retyping it.
 
+**Every command honours it**, not only the console:
+
+```bash
+michi inspect          # uses data + target from michi.toml
+michi bench --no-save  # also uses models, cv, seed
+michi report           # uses runs_dir
+```
+
+An explicit flag always wins. A configured *target* is treated as a hint
+rather than a command: if you run against a different dataset that lacks it,
+michi says so and continues without one instead of failing a run you did not
+misconfigure.
+
 `michi info` prints which file was found and what it supplies.
 
 ## Non-interactive contexts

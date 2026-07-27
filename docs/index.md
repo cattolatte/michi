@@ -18,7 +18,7 @@ judgement call to you.
 ## Install
 
 ```bash
-pip install michi
+pip install michi-ml
 ```
 
 ## First command

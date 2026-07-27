@@ -4,8 +4,10 @@ Fifteen minutes, one messy CSV, and no commitment. Nothing here asks you to
 restructure a project, adopt a template, or import anything.
 
 ```bash
-pip install michi
+pip install michi-ml
 ```
+
+(The distribution is `michi-ml`; the command is `michi`.)
 
 ## 1. Look at the data
 

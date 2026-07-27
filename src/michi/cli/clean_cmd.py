@@ -20,6 +20,8 @@ from rich.console import Console
 from rich.padding import Padding
 from rich.text import Text
 
+from michi.cli.context import resolve_defaults
+from michi.cli.errors import fail
 from michi.core.errors import MichiError
 from michi.core.io import DEFAULT_SAMPLE_ROWS, load_table
 
@@ -28,8 +30,12 @@ __all__ = ["apply_command", "clean_command", "export_command"]
 
 def clean_command(
     data: Annotated[
-        Path, typer.Argument(help="Dataset to author a recipe for.", show_default=False)
-    ],
+        Path | None,
+        typer.Argument(
+            help="Dataset to author a recipe for. Falls back to `data` in michi.toml.",
+            show_default=False,
+        ),
+    ] = None,
     output: Annotated[
         Path, typer.Option("--out", "-o", help="Where to write the recipe.")
     ] = Path("michi.recipe.yaml"),
@@ -75,7 +81,9 @@ def clean_command(
     full: Annotated[
         bool, typer.Option("--full", help="Read every row, however large the file.")
     ] = False,
-    seed: Annotated[int, typer.Option("--seed", help="Seed for sampling.")] = 0,
+    seed: Annotated[
+        int | None, typer.Option("--seed", help="Seed for sampling.")
+    ] = None,
 ) -> None:
     """Author a cleaning recipe — interactively, or entirely from flags.
 
@@ -84,6 +92,15 @@ def clean_command(
     cleaned copy, and 'michi export' compiles the recipe into pipeline code.
     """
     console = Console()
+    defaults = resolve_defaults()
+    resolved_seed = defaults.number("seed", seed) or 0
+
+    try:
+        resolved_data = defaults.required_data(data)
+    except MichiError as err:
+        fail(str(err))
+        raise typer.Exit(code=2) from err
+
     try:
         from michi.inspection import profile_table
         from michi.recipes import (
@@ -91,7 +108,12 @@ def clean_command(
             write_recipe,
         )
 
-        table = load_table(data, sample_rows=sample, full=full, seed=seed)
+        table = load_table(
+            resolved_data, sample_rows=sample, full=full, seed=resolved_seed
+        )
+        target, note = defaults.target_for(target, table.frame.columns)
+        if note:
+            console.print(f"  [dim]{note}[/]")
         profile = profile_table(table, target=target)
 
         flags_given = any([drop, dedupe, cast, impute, clip, encode, scale])
@@ -110,7 +132,7 @@ def clean_command(
         else:
             recipe = _run_wizard(profile, console, target=target)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     if not recipe.steps:
@@ -120,11 +142,11 @@ def clean_command(
     write_recipe(recipe, output)
     console.print()
     console.print(Padding(_summary(recipe, output), (0, 0, 1, 2)))
-    console.print(Padding(_reproduce(recipe, str(data)), (0, 0, 1, 2)))
+    console.print(Padding(_reproduce(recipe, str(resolved_data)), (0, 0, 1, 2)))
     console.print(
         Padding(
             Text(
-                f"Next:  michi apply {output} {data} -o clean.parquet\n"
+                f"Next:  michi apply {output} {resolved_data} -o clean.parquet\n"
                 f"       michi export {output} -o pipeline.py",
                 style="dim",
             ),
@@ -173,7 +195,7 @@ def apply_command(
         table = load_table(data, sample_rows=sample, full=full, seed=seed)
         result = apply_recipe(recipe, table.frame, strict=strict)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     console.print()
@@ -200,7 +222,7 @@ def apply_command(
     try:
         _write_frame(result.frame, output)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
     console.print(Padding(Text(f"wrote {output}", style="dim"), (0, 0, 1, 2)))
 
@@ -227,7 +249,7 @@ def export_command(
         recipe = load_recipe(recipe_path)
         code = export_recipe(recipe, module_name=output.stem if output else "pipeline")
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     if output is None:

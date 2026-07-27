@@ -18,6 +18,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from michi.cli.context import resolve_defaults
+from michi.cli.errors import fail
 from michi.core.errors import MichiError
 
 __all__ = ["report_command"]
@@ -25,9 +27,12 @@ __all__ = ["report_command"]
 
 def report_command(
     source: Annotated[
-        Path,
-        typer.Argument(help="Runs directory or a single manifest file."),
-    ] = Path("runs"),
+        Path | None,
+        typer.Argument(
+            help="Runs directory or a single manifest file. "
+            "Falls back to `runs_dir` in michi.toml."
+        ),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option("--out", "-o", help="Write the report here instead of stdout."),
@@ -47,6 +52,7 @@ def report_command(
     Markdown, or a LaTeX table ready to paste into a paper.
     """
     console = Console()
+    source = resolve_defaults().path("runs_dir", source) or Path("runs")
     try:
         from michi.report import (
             render_runs_html,
@@ -59,7 +65,7 @@ def report_command(
         manifests = load_manifests(source)
         groups = group_runs(manifests)
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     renderers = {

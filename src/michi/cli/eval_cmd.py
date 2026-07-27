@@ -19,8 +19,10 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from michi.core.errors import MichiError
-from michi.core.io import DEFAULT_SAMPLE_ROWS, load_table
+from michi.cli.context import resolve_defaults
+from michi.cli.errors import fail
+from michi.core.errors import DataError, MichiError
+from michi.core.io import DEFAULT_SAMPLE_ROWS, LoadedTable, load_table
 from michi.core.manifest import RunManifest
 from michi.evaluation import evaluate_model
 from michi.evaluation.metrics import BOOTSTRAP_SAMPLES
@@ -38,13 +40,21 @@ def eval_command(
         ),
     ],
     data: Annotated[
-        Path,
-        typer.Argument(help="Evaluation dataset.", show_default=False),
-    ],
+        Path | None,
+        typer.Argument(
+            help="Evaluation dataset. Falls back to `data` in michi.toml.",
+            show_default=False,
+        ),
+    ] = None,
     target: Annotated[
-        str,
-        typer.Option("--target", "-t", help="Label column.", show_default=False),
-    ],
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Label column. Falls back to `target` in michi.toml.",
+            show_default=False,
+        ),
+    ] = None,
     task: Annotated[
         str | None,
         typer.Option(
@@ -68,10 +78,17 @@ def eval_command(
             "(default: low-cardinality columns).",
         ),
     ] = None,
+    recipe: Annotated[
+        Path | None,
+        typer.Option(
+            "--recipe",
+            help="Cleaning recipe to apply to the data before evaluating.",
+        ),
+    ] = None,
     runs_dir: Annotated[
-        Path,
+        Path | None,
         typer.Option("--runs-dir", help="Directory to write the run manifest into."),
-    ] = Path("runs"),
+    ] = None,
     no_save: Annotated[
         bool,
         typer.Option("--no-save", help="Do not write a run manifest."),
@@ -102,8 +119,8 @@ def eval_command(
         bool, typer.Option("--full", help="Read every row, however large the file.")
     ] = False,
     seed: Annotated[
-        int, typer.Option("--seed", help="Seed for sampling and resampling.")
-    ] = 0,
+        int | None, typer.Option("--seed", help="Seed for sampling and resampling.")
+    ] = None,
     fail_under: Annotated[
         str | None,
         typer.Option(
@@ -122,15 +139,30 @@ def eval_command(
     misleading.
     """
     console = Console()
+    defaults = resolve_defaults()
+    seed = defaults.number("seed", seed) or 0
+    runs_dir = defaults.path("runs_dir", runs_dir) or Path("runs")
+    resolved_target = defaults.text("target", target)
+    recipe_path = defaults.path("recipe", recipe)
     try:
         from michi.adapters import load_model
 
+        if resolved_target is None:
+            msg = (
+                'no target given. Pass --target, or set `target = "..."` '
+                "under [defaults] in michi.toml."
+            )
+            raise DataError(msg)
+
         loaded = load_model(model)
-        table = load_table(data, sample_rows=sample, full=full, seed=seed)
+        table = load_table(
+            defaults.required_data(data), sample_rows=sample, full=full, seed=seed
+        )
+        table = _with_recipe(table, recipe_path)
         manifest = evaluate_model(
             loaded,
             table,
-            target=target,
+            target=resolved_target,
             task=task,
             features=_split(features),
             slice_columns=_split(slice_by),
@@ -138,7 +170,7 @@ def eval_command(
             seed=seed,
         )
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     render_evaluation(manifest, console, explain=explain)
@@ -158,6 +190,25 @@ def eval_command(
 
     if fail_under is not None:
         raise typer.Exit(code=_gate(manifest, fail_under, console))
+
+
+def _with_recipe(table: LoadedTable, recipe_path: Path | None) -> LoadedTable:
+    """Apply a recipe's deterministic steps before evaluating.
+
+    Only the deterministic steps run: imputers and encoders in a recipe were
+    fitted for training, and re-fitting them on the evaluation set here would
+    quietly change what is being measured. Evaluate a pipeline that carries
+    its own preparation when that is what you mean.
+    """
+    from dataclasses import replace
+
+    if recipe_path is None:
+        return table
+
+    from michi.recipes import apply_deterministic, load_recipe
+
+    recipe = load_recipe(recipe_path)
+    return replace(table, frame=apply_deterministic(recipe, table.frame))
 
 
 def _split(value: str | None) -> tuple[str, ...] | None:

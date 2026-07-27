@@ -98,7 +98,15 @@ michi eval model.pkl test.csv --target y --features age,income,region
 ```
 
 If the model expects preprocessed input, evaluate a pipeline that includes the
-preprocessing. From v0.4, `--recipe` will apply a michi cleaning recipe first.
+preprocessing, or apply a recipe first:
+
+```bash
+michi eval model.pkl test.csv --target y --recipe michi.recipe.yaml
+```
+
+Only the recipe's *deterministic* steps run — dropping, casting, clipping.
+Imputers and encoders in a recipe were fitted for training, and re-fitting
+them on the evaluation set would quietly change what is being measured.
 
 ## Slices
 
@@ -129,6 +137,7 @@ model or data could not be read.
 | `--task` | inferred | Force `classification` or `regression` |
 | `--features` | all but target | Columns to pass to the model |
 | `--slice` | low-cardinality columns | Columns to score subgroups over |
+| `--recipe` | none | Cleaning recipe to apply before evaluating |
 | `--runs-dir` | `runs` | Where manifests are written |
 | `--no-save` | off | Do not write a manifest |
 | `--json` | none | Also write the manifest here |

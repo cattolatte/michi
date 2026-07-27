@@ -60,7 +60,7 @@ Prints the menu with a factual line about each. michi never picks for you and
 never calls a model best. Everything trains **locally** — these are algorithms,
 not downloads, and michi makes no network calls.
 
-| Available in the base install | With `michi[bench]` |
+| Available in the base install | With `michi-ml[bench]` |
 |---|---|
 | `dummy`, `linear`, `ridge`, `lasso`, `tree`, `rf`, `extra-trees`, `hist-gbm`, `knn`, `svm`, `naive-bayes` | `xgb`, `lgbm`, `catboost` |
 
@@ -91,7 +91,15 @@ michi bench data.csv --target y --impute mean --encode ordinal --no-scale
 ```
 
 For real cleaning decisions — which columns to drop, how to treat outliers —
-author a recipe with `michi clean` (v0.4), which `bench` will accept.
+author a recipe with [`michi clean`](clean.md) and pass it:
+
+```bash
+michi bench data.csv --target y --recipe michi.recipe.yaml
+```
+
+The recipe's deterministic steps run once, up front; its fitted steps replace
+michi's default preparation *inside each fold*. A recipe you wrote takes
+precedence over michi's assumptions.
 
 ## Cross-validation
 
@@ -129,6 +137,7 @@ offline page.
 | `--no-save` | off | Do not write manifests |
 | `--report` | none | Write an HTML report |
 | `--open` | off | Open the report in a browser |
+| `--recipe` | none | Cleaning recipe to apply |
 | `--seed` | 0 | Seed for folds and models |
 
 ## A note on the intervals

@@ -45,16 +45,19 @@ account to create, and nothing ever leaves your machine.
 ## 使い方 — getting started
 
 ```bash
-pip install michi
+pip install michi-ml
 michi inspect data.csv --target label --explain
 ```
+
+The distribution is `michi-ml` because `michi` was already taken on PyPI. The
+command and the import are both `michi`.
 
 New here? The [quickstart](docs/quickstart.md) takes one messy CSV to a
 compared, reported model in fifteen minutes, and asks for no commitment along
 the way.
 
-Optional extras: `michi[bench]` (XGBoost, LightGBM, CatBoost), `michi[excel]`,
-`michi[shap]`, `michi[ui]`.
+Optional extras: `michi-ml[bench]` (XGBoost, LightGBM, CatBoost), `michi-ml[excel]`,
+`michi-ml[shap]`, `michi-ml[ui]`.
 
 <br>
 

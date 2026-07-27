@@ -22,10 +22,12 @@ from pathlib import Path
 
 from rich import box
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
 
 from michi.console.session import Session
+from michi.core.errors import install_hint
 
 __all__ = ["COMMANDS", "ConsoleCommand", "dispatch", "expand", "split_line"]
 
@@ -350,8 +352,8 @@ def _handle_show(args: list[str], session: Session, console: Console) -> bool:
 
         console.print()
         for entry in available_models():
-            extra = f" [dim](needs michi[{entry.extra}])[/]" if entry.extra else ""
-            console.print(f"  [cyan]{entry.name:<12}[/] {entry.summary}{extra}")
+            note = f" (needs {install_hint(entry.extra)})" if entry.extra else ""
+            console.print(f"  [cyan]{entry.name:<12}[/] {escape(entry.summary + note)}")
         console.print()
     elif what == "runs":
         directory = Path(session.runs_dir)

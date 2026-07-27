@@ -16,7 +16,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from michi.core.errors import MichiError
+from michi.cli.errors import fail
+from michi.core.errors import MichiError, install_hint
 
 __all__ = ["ui_command"]
 
@@ -44,10 +45,9 @@ def ui_command(
 
         app = build_app(runs_dir)
     except ImportError as err:
-        Console(stderr=True).print(
-            "[bold red]error[/] the local viewer requires the ui extra: "
-            "pip install 'michi[ui]'. Everything it shows is also available "
-            "from `michi report`."
+        fail(
+            f"the local viewer requires the ui extra: {install_hint('ui')}. "
+            "Everything it shows is also available from `michi report`."
         )
         raise typer.Exit(code=2) from err
     except MichiError as err:

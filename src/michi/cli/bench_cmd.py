@@ -19,6 +19,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from michi.cli.context import resolve_defaults
+from michi.cli.errors import fail
 from michi.core.errors import MichiError
 from michi.core.io import DEFAULT_SAMPLE_ROWS, load_table
 from michi.core.manifest import RunManifest
@@ -38,13 +40,13 @@ def bench_command(
         typer.Option("--target", "-t", help="Label column.", show_default=False),
     ] = None,
     models: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--models",
             "-m",
             help="Comma-separated model names. A dummy baseline is always added.",
         ),
-    ] = _DEFAULT_MODELS,
+    ] = None,
     list_models: Annotated[
         bool,
         typer.Option("--list-models", help="Print the model menu and exit."),
@@ -54,8 +56,8 @@ def bench_command(
         typer.Option("--task", help="Force 'classification' or 'regression'."),
     ] = None,
     folds: Annotated[
-        int, typer.Option("--cv", help="Number of cross-validation folds.")
-    ] = 5,
+        int | None, typer.Option("--cv", help="Number of cross-validation folds.")
+    ] = None,
     impute: Annotated[
         str,
         typer.Option("--impute", help="Numeric imputation: median, mean, or constant."),
@@ -68,9 +70,14 @@ def bench_command(
         bool,
         typer.Option("--no-scale", help="Never standardise, even for linear models."),
     ] = False,
+    recipe: Annotated[
+        Path | None,
+        typer.Option("--recipe", help="Cleaning recipe to apply before benchmarking."),
+    ] = None,
     runs_dir: Annotated[
-        Path, typer.Option("--runs-dir", help="Directory to write manifests into.")
-    ] = Path("runs"),
+        Path | None,
+        typer.Option("--runs-dir", help="Directory to write manifests into."),
+    ] = None,
     no_save: Annotated[
         bool, typer.Option("--no-save", help="Do not write run manifests.")
     ] = False,
@@ -92,8 +99,8 @@ def bench_command(
         bool, typer.Option("--full", help="Read every row, however large the file.")
     ] = False,
     seed: Annotated[
-        int, typer.Option("--seed", help="Seed for folds and model randomness.")
-    ] = 0,
+        int | None, typer.Option("--seed", help="Seed for folds and model randomness.")
+    ] = None,
 ) -> None:
     """Train several models and report which are actually different.
 
@@ -107,28 +114,41 @@ def bench_command(
         _print_model_menu(console, task)
         raise typer.Exit()
 
-    if data is None or target is None:
-        msg = "michi bench needs a dataset and --target (or use --list-models)"
-        raise typer.BadParameter(msg)
+    defaults = resolve_defaults()
+    seed = defaults.number("seed", seed) or 0
+    folds = defaults.number("cv", folds) or 5
+    runs_dir = defaults.path("runs_dir", runs_dir) or Path("runs")
+    models = defaults.text("models", models) or _DEFAULT_MODELS
+    recipe_path = defaults.path("recipe", recipe)
 
     try:
         from michi.bench import PreparationPolicy, run_benchmark
+        from michi.recipes import load_recipe
         from michi.report import render_benchmark
 
-        table = load_table(data, sample_rows=sample, full=full, seed=seed)
+        table = load_table(
+            defaults.required_data(data), sample_rows=sample, full=full, seed=seed
+        )
+        resolved_target, note = defaults.target_for(target, table.frame.columns)
+        if note:
+            console.print(f"  [dim]{note}[/]")
+        if resolved_target is None:
+            msg = "michi bench needs --target (or `target` in michi.toml)"
+            raise typer.BadParameter(msg)
         result = run_benchmark(
             table,
-            target=target,
+            target=resolved_target,
             models=tuple(name.strip() for name in models.split(",") if name.strip()),
             task=task,
             folds=folds,
+            recipe=None if recipe_path is None else load_recipe(recipe_path),
             policy=PreparationPolicy(
                 numeric_impute=impute, encode=encode, scale=not no_scale
             ),
             seed=seed,
         )
     except MichiError as err:
-        Console(stderr=True).print(f"[bold red]error[/] {err}")
+        fail(str(err))
         raise typer.Exit(code=2) from err
 
     render_benchmark(result, console, explain=explain)
