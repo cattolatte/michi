@@ -263,3 +263,59 @@ def test_folds_shrink_to_what_a_rare_class_supports(tmp_path: Path) -> None:
     frame.to_csv(path, index=False)
     result = _bench(path, target="label", models=("tree",), folds=5)
     assert result.folds <= 3
+
+
+def test_a_recipe_that_names_only_some_columns_still_trains(
+    messy_csv: Path, tmp_path: Path
+) -> None:
+    """A recipe speaks about the columns it names; the rest still need prep.
+
+    A recipe with fitted steps used to build a transformer covering only its
+    own columns and pass everything else through untouched — handing the
+    estimator raw strings and failing every fold.
+    """
+    from michi.recipes import Recipe, RecipeStep
+
+    recipe = Recipe(
+        steps=(
+            RecipeStep("drop", {"columns": ["notes"]}),
+            RecipeStep("impute", {"columns": ["salary"], "strategy": "median"}),
+        ),
+        target="purchased",
+    )
+    result = run_benchmark(
+        load_table(messy_csv),
+        target="purchased",
+        models=("tree",),
+        folds=3,
+        recipe=recipe,
+    )
+    tree = next(item for item in result.results if item.name == "tree")
+    assert tree.failed is None
+
+
+def test_a_recipe_step_wins_over_the_default_for_its_columns(
+    messy_csv: Path,
+) -> None:
+    """Where a recipe speaks, it decides; michi fills only the silence."""
+    from michi.bench.preprocess import column_specs
+    from michi.recipes import Recipe, RecipeStep, transformer_specs
+
+    frame = load_table(messy_csv).frame.drop(columns=["purchased"])
+    recipe = Recipe(
+        steps=(RecipeStep("impute", {"columns": ["salary"], "strategy": "mean"}),)
+    )
+    claimed = {
+        name for _, _, columns in transformer_specs(recipe, frame) for name in columns
+    }
+    assert "salary" in claimed
+
+    covered = {
+        name
+        for _, _, columns in column_specs(
+            frame, PreparationPolicy(), needs_scaling=False, skip=claimed
+        )
+        for name in columns
+    }
+    assert "salary" not in covered
+    assert "age" in covered

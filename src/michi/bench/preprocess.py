@@ -24,7 +24,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
-__all__ = ["PreparationPolicy", "build_pipeline", "describe_policy"]
+__all__ = [
+    "PreparationPolicy",
+    "build_pipeline",
+    "column_specs",
+    "describe_policy",
+]
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import pandas as pd
@@ -68,42 +73,31 @@ def describe_policy(policy: PreparationPolicy, *, scaled: bool) -> str:
     return " · ".join(parts) + " — fitted inside each fold"
 
 
-def build_pipeline(
+def column_specs(
     frame: pd.DataFrame,
-    estimator: Any,
     policy: PreparationPolicy,
     *,
     needs_scaling: bool,
-) -> Any:
-    """Wrap an estimator in the column preparation it needs.
+    skip: set[str] | None = None,
+) -> list[tuple[str, Any, list[str]]]:
+    """Default preparation for the columns nobody else has claimed.
 
-    Parameters
-    ----------
-    frame
-        The feature frame, used only to decide which columns are numeric and
-        which are categorical.
-    estimator
-        The model to place at the end of the pipeline.
-    policy
-        The preparation choices to apply.
-    needs_scaling
-        Whether this estimator is sensitive to feature scale.
-
-    Returns
-    -------
-    Any
-        An sklearn ``Pipeline`` whose every fitted step learns from training
-        data only.
+    A recipe speaks only about the columns it names. The rest still have to
+    reach the estimator as numbers, so michi prepares them the documented way
+    — and says so, rather than passing strings through to a model that will
+    fail on them.
     """
     import pandas as pd
-    from sklearn.compose import ColumnTransformer
     from sklearn.impute import SimpleImputer
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 
+    claimed = skip or set()
     numeric: list[str] = []
     categorical: list[str] = []
     for name in frame.columns:
+        if str(name) in claimed:
+            continue
         series = frame[name]
         if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series):
             numeric.append(str(name))
@@ -135,11 +129,44 @@ def build_pipeline(
         ("encode", encoder),
     ]
 
-    transformers: list[tuple[str, Any, list[str]]] = []
+    specs: list[tuple[str, Any, list[str]]] = []
     if numeric:
-        transformers.append(("numeric", Pipeline(numeric_steps), numeric))
+        specs.append(("numeric", Pipeline(numeric_steps), numeric))
     if categorical:
-        transformers.append(("categorical", Pipeline(categorical_steps), categorical))
+        specs.append(("categorical", Pipeline(categorical_steps), categorical))
+    return specs
 
-    preparation = ColumnTransformer(transformers, remainder="drop")
+
+def build_pipeline(
+    frame: pd.DataFrame,
+    estimator: Any,
+    policy: PreparationPolicy,
+    *,
+    needs_scaling: bool,
+) -> Any:
+    """Wrap an estimator in the column preparation it needs.
+
+    Parameters
+    ----------
+    frame
+        The feature frame, used only to decide which columns are numeric and
+        which are categorical.
+    estimator
+        The model to place at the end of the pipeline.
+    policy
+        The preparation choices to apply.
+    needs_scaling
+        Whether this estimator is sensitive to feature scale.
+
+    Returns
+    -------
+    Any
+        An sklearn ``Pipeline`` whose every fitted step learns from training
+        data only.
+    """
+    from sklearn.compose import ColumnTransformer
+    from sklearn.pipeline import Pipeline
+
+    specs = column_specs(frame, policy, needs_scaling=needs_scaling)
+    preparation = ColumnTransformer(specs, remainder="drop")
     return Pipeline([("prepare", preparation), ("model", estimator)])

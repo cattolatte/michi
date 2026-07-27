@@ -51,8 +51,21 @@ class Comparison:
         if self.model == self.leader:
             return "leader"
         if self.significant:
-            return f"worse than {self.leader} (p={self.adjusted_p:.3g})"
-        return f"not distinguishable from {self.leader} (p={self.adjusted_p:.3g})"
+            return f"worse than {self.leader} ({self.formatted_p})"
+        return f"not distinguishable from {self.leader} ({self.formatted_p})"
+
+    @property
+    def formatted_p(self) -> str:
+        """The adjusted p-value, reported as a bound when it underflows.
+
+        A difference that is identical on every fold sends the statistic to
+        infinity and the p-value to zero. Printing ``p=0`` reads as a bug
+        rather than as the certainty it represents, so very small values are
+        shown as a bound.
+        """
+        if self.adjusted_p < 1e-4:
+            return "p<0.0001"
+        return f"p={self.adjusted_p:.3g}"
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise for inclusion in a run manifest."""

@@ -9,28 +9,29 @@
 # Operations: drop · dedupe · cast · impute · clip · encode · scale
 
 schema_version: "1.0"
-michi_version: "0.3.0"
-created_at: "2026-07-26T18:23:44Z"
+michi_version: "1.0.1"
+created_at: "2026-07-27T01:46:33Z"
 target: purchased
 
 # The data this recipe was written against. Applying it to
 # something with different columns fails loudly, on purpose.
 source:
-  path: customers.csv
-  sha256: "8b0f2ad7de6232b18ca83ec9d88c237d9018b82b46af93e7b7cb4891162eaa8a"
-  n_rows: 120
+  path: "data/customers.csv"
+  sha256: "0dbfe06c871919adcf4718267926b556d2d3c9c03bd23f52e08383b26ac506f5"
+  n_rows: 600
   columns:
     age: numeric
     salary: numeric
+    region: categorical
     cabin: categorical
     notes: empty
     country: categorical
+    country_copy: categorical
     record_id: text
     fare: numeric
-    amount_text: numeric
+    amount_text: text
     signup_date: categorical
     age_months: numeric
-    country_copy: categorical
     outcome_code: categorical
     purchased: numeric
 
@@ -39,12 +40,15 @@ source:
 # modelling, use `michi export` — the generated pipeline fits them inside the
 # train/test split, where they cannot leak.
 steps:
-  # requested with --drop
   - op: drop
-    columns: ["notes", "country"]
+    columns: ["notes", "country", "country_copy", "record_id", "outcome_code", "age_months"]
+    why: "requested with --drop"
   - op: cast
     columns: ["amount_text"]
     to: numeric
+  - op: cast
+    columns: ["signup_date"]
+    to: datetime
   - op: impute
     columns: ["salary"]
     strategy: median

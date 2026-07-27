@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>michi bench — churned</title>
+<title>michi bench — purchased</title>
 <style>
   :root {
     --bg: #fbfaf8; --panel: #ffffff; --ink: #1c1b1a; --muted: #6b6764;
@@ -65,10 +65,10 @@
 
 <header>
   <div class="brand"><span class="kanji">道</span>michi bench</div>
-  <div class="sub mono">target: churned</div>
+  <div class="sub mono">target: purchased</div>
   <div class="stats">
     <div class="stat"><div class="value">5</div><div class="label">models</div></div>
-    <div class="stat"><div class="value">490</div><div class="label">rows</div></div>
+    <div class="stat"><div class="value">600</div><div class="label">rows</div></div>
     <div class="stat"><div class="value">5</div><div class="label">folds</div></div>
     <div class="stat"><div class="value">classification</div><div class="label">task</div></div>
     <div class="stat"><div class="value">balanced_accuracy</div><div class="label">ranked by</div></div>
@@ -84,34 +84,34 @@
     </thead>
     <tbody>
       <tr>
-        <td class="mono leader">knn</td>
-        <td class="num ">0.7149</td>
-        <td class="num muted">0.613–0.8167</td>
+        <td class="mono leader">linear</td>
+        <td class="num ">0.892</td>
+        <td class="num muted">0.8599–0.9241</td>
         <td class="leader">leader</td>
       </tr>
       <tr>
-        <td class="mono ">linear</td>
-        <td class="num ">0.7083</td>
-        <td class="num muted">0.6278–0.7888</td>
-        <td class="tied">tied with leader (p=0.992)</td>
+        <td class="mono ">rf</td>
+        <td class="num ">0.8779</td>
+        <td class="num muted">0.8323–0.9235</td>
+        <td class="tied">tied with leader (p=0.589)</td>
       </tr>
       <tr>
         <td class="mono ">hist-gbm</td>
-        <td class="num ">0.6955</td>
-        <td class="num muted">0.6058–0.7853</td>
-        <td class="tied">tied with leader (p=0.992)</td>
+        <td class="num ">0.8746</td>
+        <td class="num muted">0.83–0.9192</td>
+        <td class="tied">tied with leader (p=0.589)</td>
       </tr>
       <tr>
-        <td class="mono ">rf</td>
-        <td class="num ">0.694</td>
-        <td class="num muted">0.6157–0.7723</td>
-        <td class="tied">tied with leader (p=0.992)</td>
+        <td class="mono ">knn</td>
+        <td class="num ">0.8621</td>
+        <td class="num muted">0.8282–0.896</td>
+        <td class="tied">tied with leader (p=0.355)</td>
       </tr>
       <tr>
         <td class="mono ">dummy</td>
         <td class="num ">0.5</td>
         <td class="num muted">0.5–0.5</td>
-        <td class="tied">tied with leader (p=0.0698)</td>
+        <td class="muted">worse (p&lt;0.0001)</td>
       </tr>
     </tbody>
   </table>
@@ -119,8 +119,8 @@
 
 <div class="verdict">
   <strong>Verdict.</strong>
-      <code>knn</code> scores highest, but
-<code>linear</code>, <code>hist-gbm</code>, <code>rf</code>, <code>dummy</code>      are statistically indistinguishable
+      <code>linear</code> scores highest, but
+<code>rf</code>, <code>hist-gbm</code>, <code>knn</code>      are statistically indistinguishable
       from it at this sample size. Choosing between them on these numbers alone
       is not supported.
 </div>
@@ -131,7 +131,7 @@
     <tbody>
       <tr>
         <td style="width:1%"><span class="sev sev-warn">warn</span></td>
-        <td>4 model(s) are not statistically distinguishable from knn: linear, hist-gbm, rf, dummy</td>
+        <td>3 model(s) are not statistically distinguishable from linear: rf, hist-gbm, knn</td>
       </tr>
     </tbody>
   </table>
@@ -157,8 +157,8 @@
 </p>
 
 <footer>
-  michi 0.3.0 ·
-  2.5s ·
+  michi 1.0.1 ·
+  3.7s ·
   seed 0
 </footer>
 

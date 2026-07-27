@@ -166,3 +166,107 @@ def test_generated_code_explains_the_leakage_split() -> None:
         Recipe(steps=(RecipeStep("impute", {"columns": ["a"], "strategy": "median"}),))
     )
     assert "cross-validation" in code
+
+
+# --- long literals ---------------------------------------------------------
+
+
+def _wide_recipe() -> Recipe:
+    """A recipe naming enough columns to overflow a single source line."""
+    return Recipe(
+        steps=(
+            RecipeStep(
+                "drop",
+                {
+                    "columns": [
+                        "notes",
+                        "country",
+                        "country_copy",
+                        "record_id",
+                        "outcome_code",
+                        "age_months",
+                    ]
+                },
+                why="requested with --drop",
+            ),
+            RecipeStep(
+                "cast",
+                {
+                    "columns": ["amount_text", "signup_date", "reference_code"],
+                    "to": "numeric",
+                },
+            ),
+            RecipeStep(
+                "impute",
+                {
+                    "columns": ["salary", "age", "fare", "tenure", "balance", "score"],
+                    "strategy": "median",
+                },
+            ),
+        ),
+        target="purchased",
+    )
+
+
+def test_a_recipe_with_many_columns_still_generates_valid_code(
+    tmp_path: Path,
+) -> None:
+    """Six dropped columns produce a 128-character line if emitted naively."""
+    path = tmp_path / "pipeline.py"
+    path.write_text(export_recipe(_wide_recipe()), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", str(path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 1 and "No module named" in result.stderr:
+        pytest.skip("ruff is not installed in this environment")
+    assert result.returncode == 0, result.stdout
+
+
+def test_a_recipe_with_many_columns_is_already_formatted(tmp_path: Path) -> None:
+    """Wrapped literals must match what the formatter would have written."""
+    path = tmp_path / "pipeline.py"
+    path.write_text(export_recipe(_wide_recipe()), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "ruff", "format", "--check", str(path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 1 and "No module named" in result.stderr:
+        pytest.skip("ruff is not installed in this environment")
+    assert result.returncode == 0, result.stdout
+
+
+def test_wrapped_code_still_means_the_same_thing(tmp_path: Path) -> None:
+    """Wrapping is a formatting change; the transformation must not move."""
+    recipe = Recipe(
+        steps=(
+            RecipeStep(
+                "drop",
+                {
+                    "columns": [
+                        "drop_me",
+                        "also_drop_me_a_very_long_name",
+                        "and_another_long_column_name",
+                    ]
+                },
+            ),
+        )
+    )
+    frame = pd.DataFrame(
+        {
+            "keep": [1, 2, 3],
+            "drop_me": ["a", "b", "c"],
+            "also_drop_me_a_very_long_name": [1, 2, 3],
+            "and_another_long_column_name": [4, 5, 6],
+        }
+    )
+    module = _write_and_import(export_recipe(recipe), tmp_path)
+    pd.testing.assert_frame_equal(
+        module.prepare(frame).reset_index(drop=True),
+        apply_recipe(recipe, frame).frame.reset_index(drop=True),
+        check_dtype=False,
+    )

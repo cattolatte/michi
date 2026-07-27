@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-07-27
+
+### Fixed
+- **A recipe with fitted steps produced an untrainable pipeline.** The
+  transformer covered only the columns the recipe named and passed the rest
+  through untouched, so a benchmark handed the estimator raw strings and every
+  fold failed. A recipe now decides for the columns it speaks about, and
+  michi's documented preparation covers the silence.
+- **Generated code failed its own linter on wide recipes.** A six-column drop
+  emitted a 128-character line; long literals are now wrapped exactly as the
+  formatter would write them, and the tests cover a recipe wide enough to
+  trigger it.
+- A p-value that underflows to zero is reported as `p<0.0001` rather than
+  `p=0`, which read as a bug rather than as the certainty it represents.
+
+### Changed
+- Every example in the README and in `examples/` is now real captured output
+  from one run over one dataset, rather than illustrative text.
+
 ## [1.0.1] — 2026-07-27
 
 Fixes found by using the built package the way a stranger would.

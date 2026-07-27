@@ -132,6 +132,9 @@ def _prepare_function(steps: tuple[RecipeStep, ...]) -> list[str]:
     return lines
 
 
+_LINE_LIMIT = 88
+
+
 def _literal(value: object) -> str:
     """Render a Python literal with double quotes, as ruff format emits them."""
     import json
@@ -139,13 +142,40 @@ def _literal(value: object) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _wrapped_list(
+    columns: list[str], *, indent: str, prefix: str, suffix: str
+) -> list[str]:
+    """Emit a list literal, exploding it when one line would be too long.
+
+    Generated code has to satisfy the same formatter michi's own source does,
+    and a recipe that drops eight columns produces a line well past the limit.
+    This reproduces what the formatter would have written.
+    """
+    single = f"{indent}{prefix}{_literal(columns)}{suffix}"
+    if len(single) <= _LINE_LIMIT:
+        return [single]
+
+    lines = [f"{indent}{prefix}["]
+    lines.extend(f"{indent}    {_literal(column)}," for column in columns)
+    lines.append(f"{indent}]{suffix}")
+    return lines
+
+
 def _render_deterministic(step: RecipeStep) -> list[str]:
     columns = _literal(list(step.columns))
     if step.op == "drop":
-        return [
-            f"    # Drop {len(step.columns)} column(s).",
-            f'    frame = frame.drop(columns={columns}, errors="ignore")',
-        ]
+        names = list(step.columns)
+        single = f'    frame = frame.drop(columns={columns}, errors="ignore")'
+        if len(single) <= _LINE_LIMIT:
+            body = [single]
+        else:
+            body = [
+                "    frame = frame.drop(",
+                *_wrapped_list(names, indent="        ", prefix="columns=", suffix=","),
+                '        errors="ignore",',
+                "    )",
+            ]
+        return [f"    # Drop {len(names)} column(s).", *body]
     if step.op == "dedupe":
         subset = f"subset={columns}" if step.columns else "subset=None"
         return [
@@ -156,33 +186,48 @@ def _render_deterministic(step: RecipeStep) -> list[str]:
         target_type = str(step.params.get("to", "numeric"))
         if target_type == "numeric":
             return [
-                f"    # Parse {columns} as numbers, stripping separators and",
-                "    # currency marks. Unparseable values become missing.",
-                f"    for column in {columns}:",
+                f"    # Parse {len(step.columns)} column(s) as numbers, stripping",
+                "    # separators and currency marks. Unparseable values "
+                "become missing.",
+                *_wrapped_list(
+                    list(step.columns),
+                    indent="    ",
+                    prefix="for column in ",
+                    suffix=":",
+                ),
                 "        cleaned = frame[column].astype(str).str.replace("
                 'r"[,\\s$€£¥%_]", "", regex=True)',
                 '        frame[column] = pd.to_numeric(cleaned, errors="coerce")',
             ]
         if target_type == "datetime":
             return [
-                f"    # Parse {columns} as timestamps.",
-                f"    for column in {columns}:",
-                "        frame[column] = pd.to_datetime(",
-                '            frame[column], errors="coerce", format="mixed"',
-                "        )",
+                f"    # Parse {len(step.columns)} column(s) as timestamps.",
+                *_wrapped_list(
+                    list(step.columns),
+                    indent="    ",
+                    prefix="for column in ",
+                    suffix=":",
+                ),
+                "        frame[column] = pd.to_datetime("
+                'frame[column], errors="coerce", format="mixed")',
             ]
         return [
-            f"    # Cast {columns} to {target_type}.",
-            f"    for column in {columns}:",
+            f"    # Cast {len(step.columns)} column(s) to {target_type}.",
+            *_wrapped_list(
+                list(step.columns), indent="    ", prefix="for column in ", suffix=":"
+            ),
             f'        frame[column] = frame[column].astype("{_dtype(target_type)}")',
         ]
     if step.op == "clip":
         lower = float(step.params.get("lower_quantile", 0.01))
         upper = float(step.params.get("upper_quantile", 0.99))
         return [
-            f"    # Clip {columns} to the {lower:.0%}–{upper:.0%} quantile range.",
+            f"    # Clip {len(step.columns)} column(s) to the "
+            f"{lower:.0%}–{upper:.0%} range.",
             "    # Note: the bounds come from whatever data is passed in.",
-            f"    for column in {columns}:",
+            *_wrapped_list(
+                list(step.columns), indent="    ", prefix="for column in ", suffix=":"
+            ),
             '        values = pd.to_numeric(frame[column], errors="coerce")',
             "        frame[column] = values.clip(",
             f"            lower=values.quantile({lower}),",
@@ -213,13 +258,16 @@ def _pipeline_function(steps: tuple[RecipeStep, ...]) -> list[str]:
         "        transformers=[",
     ]
     for index, step in enumerate(steps):
-        columns = _literal(list(step.columns))
         if step.why:
             lines.append(f"            # {step.why}")
         lines.append("            (")
         lines.append(f"                {_literal(f'{step.op}_{index}')},")
         lines.append(f"                {_transformer(step)},")
-        lines.append(f"                {columns},")
+        lines.extend(
+            _wrapped_list(
+                list(step.columns), indent="                ", prefix="", suffix=","
+            )
+        )
         lines.append("            ),")
     lines.extend(
         [

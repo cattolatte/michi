@@ -92,62 +92,73 @@ michi inspect data/customers.csv --target purchased
 ```
  道  michi inspect  ·  customers.csv
 
-  120 rows × 13 columns  ·  15.3% of cells missing  ·  0 duplicate rows
+  600 rows × 14 columns  ·  14.5% of cells missing  ·  0 duplicate rows  ·
   target purchased
-  sha256 8b0f2ad7de62  ·  7.3 KB
+  sha256 0dbfe06c8719  ·  42.0 KB
 
   column         kind          missing   unique   summary
-  ────────────────────────────────────────────────────────────────────────
-  age            numeric             —       45   mean 41.625 · range 20–64
-  salary         numeric         11.7%      106   mean 38,169 · range 30,137–46,303
-  cabin          categorical     87.5%       15   top: C0 (1), C8 (1), C16 (1)
+  ──────────────────────────────────────────────────────────────────────────
+  age            numeric             —       45   mean 42.702 · range 20–64
+  salary         numeric         13.5%      511   mean 39,358 · 1 outliers
+  region         categorical         —        4   top: north (239), south (188)
+  cabin          categorical     89.0%       66   top: C13 (1), C37 (1)
   notes          empty          100.0%        0
-  fare           numeric             —       11   mean 259 · skew +6.16 · 3 outliers
+  fare           numeric             —      467   skew +6.87 · 37 outliers
+  amount_text    text                —      598   length 5–6
   …
 
-  Findings (15)
+  Findings (14)
 
-  high    notes                  every value is missing
   high    country                only one distinct value (JP)
-  high    cabin                  87.5% missing (105 of 120)
+  high    notes                  every value is missing
+  high    cabin                  89.0% missing (534 of 600)
   high    outcome_code           each of its 2 values maps to exactly one
                                  'purchased' class
-  warn    purchased              smallest class 8.3% vs largest 91.7%
+  warn    country, country_copy  identical values in country, country_copy
   warn    age, age_months        correlation +1.000
   warn    signup_date            values parse as dates but are stored as text
+  warn    amount_text            100% of values parse as numbers
   …
 
   Run again with --explain for what each finding means and your options.
 ```
 
+That fourth finding is the one to stop on: `outcome_code` predicts the label
+perfectly, which almost always means it was recorded *after* the outcome and
+will not exist when the model runs. Catching it here saves a week later.
+
 `--html` writes a [self-contained offline report](examples/profile.html)
-(34 KB, no CDN, no JavaScript). `--json` writes a
+(no CDN, no JavaScript). `--json` writes a
 [machine-readable profile](examples/profile.json) you can diff in CI, and
 `--fail-on high` turns michi into a data-quality gate.
 
-Then compare some models — and find out whether the difference is real:
+Record what you decided, then compare some models on the cleaned data:
 
 ```bash
-michi bench data/customers.csv --target purchased --models linear,rf,hist-gbm
+michi clean data/customers.csv --target purchased   # writes a recipe you own
+michi bench data/customers.csv --target purchased \
+  --recipe michi.recipe.yaml --models linear,rf,hist-gbm
 ```
 
 ```
- 道  michi bench  ·  5 models
+ 道  michi bench  ·  4 models
 
-  classification  ·  490 rows  ·  5-fold cross-validation  ·  target purchased
+  classification  ·  600 rows  ·  5-fold cross-validation  ·  target purchased
   preparation: numeric: impute median · categorical: impute most_frequent +
   onehot · standardise (scale-sensitive models only) — fitted inside each fold
 
   Results  (ranked by balanced_accuracy)
 
-  model      balanced_accuracy      95% interval   vs leader                fit
+  model      balanced_accuracy      95% interval   vs leader               fit
   ────────────────────────────────────────────────────────────────────────────
-  linear                 0.708   0.6278 – 0.7888   leader                  0.1s
-  hist-gbm               0.696   0.6058 – 0.7853   tied with leader (p=1)  0.4s
-  rf                     0.694   0.6157 – 0.7723   tied with leader (p=1)  0.9s
-  dummy                    0.5         0.5 – 0.5   worse (p=0.0261)        0.0s
+  linear                 0.892   0.8599 – 0.9241   leader                 0.3s
+  rf                     0.878   0.8323 – 0.9235   tied with leader       0.9s
+                                                   (p=0.589)
+  hist-gbm               0.875     0.83 – 0.9192   tied with leader       2.0s
+                                                   (p=0.589)
+  dummy                    0.5         0.5 – 0.5   worse (p<0.0001)       0.0s
 
-  Verdict  linear scores highest, but hist-gbm, rf are statistically
+  Verdict  linear scores highest, but rf, hist-gbm are statistically
   indistinguishable from it at this sample size. Choosing between them on
   these numbers alone is not supported.
 ```
@@ -155,14 +166,15 @@ michi bench data/customers.csv --target purchased --models linear,rf,hist-gbm
 Most tools would have declared `linear` the winner. Differences are tested
 with the corrected resampled *t*-test (Nadeau & Bengio, 2003), because
 cross-validation folds share training data and a naive test calls noise
-significant.
+significant. A dummy baseline is always included, so "is this any good?" has
+an answer — here, clearly yes.
 
 Or run `michi` with no arguments for the console, where tab completion knows
 *your* column names:
 
 ```
 michi › use data/customers.csv
-loaded customers.csv — 13 columns
+loaded customers.csv — 14 columns
 michi (customers.csv) › set target purchased
 michi (customers.csv → purchased) › bench --models linear,rf
 …

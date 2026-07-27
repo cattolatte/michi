@@ -1,13 +1,13 @@
 """Data preparation, compiled from a michi recipe.
 
-Authored against customers.csv on 2026-07-26.
+Authored against data/customers.csv on 2026-07-27.
 
 This file is yours. It imports pandas and scikit-learn, and nothing
 else — michi is not a runtime dependency of the code it writes.
 
 Two pieces, because they carry different risks:
 
-* ``prepare`` applies the 3 deterministic step(s):
+* ``prepare`` applies the 4 deterministic step(s):
   dropping, deduplicating, casting, clipping. These depend only on the
   row in front of them, so they are safe to run on any data at any time.
 
@@ -32,16 +32,31 @@ def prepare(frame: pd.DataFrame) -> pd.DataFrame:
     """
     frame = frame.copy()
 
-    # Drop 2 column(s).
-    frame = frame.drop(columns=["notes", "country"], errors="ignore")
+    # requested with --drop
+    # Drop 6 column(s).
+    frame = frame.drop(
+        columns=[
+            "notes",
+            "country",
+            "country_copy",
+            "record_id",
+            "outcome_code",
+            "age_months",
+        ],
+        errors="ignore",
+    )
 
-    # Parse ["amount_text"] as numbers, stripping separators and
-    # currency marks. Unparseable values become missing.
+    # Parse 1 column(s) as numbers, stripping
+    # separators and currency marks. Unparseable values become missing.
     for column in ["amount_text"]:
         cleaned = frame[column].astype(str).str.replace(r"[,\s$€£¥%_]", "", regex=True)
         frame[column] = pd.to_numeric(cleaned, errors="coerce")
 
-    # Clip ["fare"] to the 1%–99% quantile range.
+    # Parse 1 column(s) as timestamps.
+    for column in ["signup_date"]:
+        frame[column] = pd.to_datetime(frame[column], errors="coerce", format="mixed")
+
+    # Clip 1 column(s) to the 1%–99% range.
     # Note: the bounds come from whatever data is passed in.
     for column in ["fare"]:
         values = pd.to_numeric(frame[column], errors="coerce")

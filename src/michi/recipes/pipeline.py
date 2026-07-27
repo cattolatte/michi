@@ -22,7 +22,7 @@ from michi.recipes.model import Recipe, RecipeStep
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import pandas as pd
 
-__all__ = ["apply_deterministic", "build_transformer"]
+__all__ = ["apply_deterministic", "build_transformer", "transformer_specs"]
 
 
 def apply_deterministic(recipe: Recipe, frame: pd.DataFrame) -> pd.DataFrame:
@@ -39,6 +39,28 @@ def apply_deterministic(recipe: Recipe, frame: pd.DataFrame) -> pd.DataFrame:
         target=recipe.target,
     )
     return apply_recipe(deterministic, frame, strict=False).frame
+
+
+def transformer_specs(
+    recipe: Recipe, frame: pd.DataFrame
+) -> list[tuple[str, Any, list[str]]]:
+    """Return one ``(name, transformer, columns)`` triple per fitted step.
+
+    Callers compose these themselves, because a recipe speaks only about the
+    columns it names — and something still has to prepare the rest.
+    """
+    present = {str(name) for name in frame.columns}
+    specs: list[tuple[str, Any, list[str]]] = []
+
+    for index, step in enumerate(recipe.fitted_steps):
+        columns = [name for name in step.columns if name in present]
+        if not columns:
+            continue
+        transformer = _transformer_for(step)
+        if transformer is None:
+            continue
+        specs.append((f"{step.op}_{index}", transformer, columns))
+    return specs
 
 
 def build_transformer(recipe: Recipe, frame: pd.DataFrame) -> Any | None:
@@ -60,22 +82,7 @@ def build_transformer(recipe: Recipe, frame: pd.DataFrame) -> Any | None:
     """
     from sklearn.compose import ColumnTransformer
 
-    fitted = recipe.fitted_steps
-    if not fitted:
-        return None
-
-    present = {str(name) for name in frame.columns}
-    transformers: list[tuple[str, Any, list[str]]] = []
-
-    for index, step in enumerate(fitted):
-        columns = [name for name in step.columns if name in present]
-        if not columns:
-            continue
-        transformer = _transformer_for(step)
-        if transformer is None:
-            continue
-        transformers.append((f"{step.op}_{index}", transformer, columns))
-
+    transformers = transformer_specs(recipe, frame)
     if not transformers:
         return None
 

@@ -139,9 +139,9 @@ def _rows(result: BenchResult) -> list[dict[str, object]]:
         elif is_leader:
             verdict = "leader"
         elif comparison.significant:
-            verdict = f"worse (p={comparison.adjusted_p:.3g})"
+            verdict = f"worse ({comparison.formatted_p})"
         else:
-            verdict = f"tied with leader (p={comparison.adjusted_p:.3g})"
+            verdict = f"tied with leader ({comparison.formatted_p})"
 
         rows.append(
             {

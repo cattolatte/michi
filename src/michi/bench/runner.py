@@ -398,15 +398,30 @@ def _fold_pipeline(
     recipe: Recipe | None,
     needs_scaling: bool,
 ) -> Any:
-    """Build the per-fold pipeline, preferring the user's recipe if given."""
+    """Build the per-fold pipeline, letting the recipe override where it speaks.
+
+    A recipe names specific columns. Those get exactly what it asked for; every
+    other column still has to reach the estimator as a number, so michi's
+    documented preparation covers the remainder. Passing them through
+    untouched would hand the model raw strings and fail the fold.
+    """
+    from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
 
     if recipe is not None:
-        from michi.recipes import build_transformer
+        from michi.bench.preprocess import column_specs
+        from michi.recipes import transformer_specs
 
-        transformer = build_transformer(recipe, features)
-        if transformer is not None:
-            return Pipeline([("prepare", transformer), ("model", estimator)])
+        specs = transformer_specs(recipe, features)
+        if specs:
+            claimed = {name for _, _, columns in specs for name in columns}
+            specs.extend(
+                column_specs(
+                    features, policy, needs_scaling=needs_scaling, skip=claimed
+                )
+            )
+            preparation = ColumnTransformer(specs, remainder="drop")
+            return Pipeline([("prepare", preparation), ("model", estimator)])
 
     return build_pipeline(features, estimator, policy, needs_scaling=needs_scaling)
 

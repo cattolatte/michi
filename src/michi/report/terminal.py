@@ -615,10 +615,10 @@ def _leaderboard(result: BenchResult) -> RenderableType:
         elif comparison.model == comparison.leader:
             verdict_text = Text("leader", style="bold green")
         elif comparison.significant:
-            verdict_text = Text(f"worse (p={comparison.adjusted_p:.3g})", style="dim")
+            verdict_text = Text(f"worse ({comparison.formatted_p})", style="dim")
         else:
             verdict_text = Text(
-                f"tied with leader (p={comparison.adjusted_p:.3g})", style="yellow"
+                f"tied with leader ({comparison.formatted_p})", style="yellow"
             )
 
         emphasis = "bold" if index == 0 else ""
