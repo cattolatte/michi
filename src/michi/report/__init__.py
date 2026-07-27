@@ -26,6 +26,7 @@ from michi.report.comparison import (
 )
 from michi.report.html import render_profile_html
 from michi.report.runs import RunGroup, group_runs, load_manifests
+from michi.report.teaching import teaching_notes
 from michi.report.terminal import (
     render_benchmark,
     render_evaluation,
@@ -48,4 +49,5 @@ __all__ = [
     "render_runs_latex",
     "render_runs_markdown",
     "render_runs_terminal",
+    "teaching_notes",
 ]

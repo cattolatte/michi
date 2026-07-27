@@ -115,6 +115,46 @@ folds to what the data supports rather than silently dropping stratification.
 | `no-clear-winner` | Several models are statistically indistinguishable |
 | `model-failed` | One model could not be trained; the rest still ran |
 
+## `--explain` — reading your own numbers
+
+A textbook can explain what a confidence interval is. What michi can explain,
+and a textbook cannot, is why *your* interval is *that* wide and why *those
+two* models could not be separated — using the folds that actually ran.
+
+```
+  Reading these numbers
+
+    The dummy baseline scores 0.5 without looking at a single feature — it is
+    what you get for free. linear scores 0.892, so the features are worth
+    0.392 of balanced_accuracy here. That gap, not the headline score, is what
+    the modelling bought.
+
+    linear scored between 0.87 and 0.9338 across the 5 folds — a spread of
+    0.06383 on the same data and the same settings, differing only in which
+    120 rows were held out. That spread is the reason the interval has the
+    width it does; it is measuring how much of the score is the fold rather
+    than the model.
+
+    rf scored 0.0141 below linear on average, but the two swapped places by
+    ±0.0244 from fold to fold. The gap is smaller than the disagreement about
+    the gap, which is what p=0.589 is reporting.
+
+    Back-of-envelope: separating them at this effect size would take roughly
+    3,200 rows, against the 600 here. That assumes the difference you measured
+    is real and that error falls with the square root of the sample — both
+    optimistic, so read it as an order of magnitude, not a target.
+```
+
+Every sentence there is a fact about the result or arithmetic on it. None of
+them tells you what to do: "separating these would take roughly 3,200 rows" is
+a calculation you can act on however you like; "you should collect more data"
+would be a judgement, and michi does not make those. A test enforces the
+distinction by scanning the notes for advice-shaped phrasing.
+
+The sample-size figure is labelled back-of-envelope because it is one. It
+assumes the measured difference is real and that error falls with √n — both
+optimistic. It is an order of magnitude, not a target.
+
 ## Output
 
 Every model gets its own run manifest in `runs/`, sharing a `group_id` so
@@ -139,6 +179,7 @@ offline page.
 | `--open` | off | Open the report in a browser |
 | `--recipe` | none | Cleaning recipe to apply |
 | `--seed` | 0 | Seed for folds and models |
+| `--explain` | off | Explain this run's own numbers, and what each check means |
 
 ## A note on the intervals
 

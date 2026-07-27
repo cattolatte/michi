@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`bench --explain` now explains your own numbers**, not statistics in
+  general. It states what the features bought over the dummy baseline, why
+  the leader's interval is as wide as it is (the actual fold-to-fold spread,
+  and how many rows each fold held out), why two tied models could not be
+  separated (the measured gap against the measured noise), and roughly how
+  many rows it would take to separate them. Every sentence is a fact about the
+  result or arithmetic on it — a test scans the notes for advice-shaped
+  phrasing, because "you should collect more data" is a judgement michi does
+  not make.
+
 ## [1.1.0] — 2026-07-27
 
 Feature engineering, and a path through the toolbox.

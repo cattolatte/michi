@@ -528,7 +528,7 @@ def render_benchmark(
     console
         Destination console.
     explain
-        Also print what each check means and which options exist.
+        Also explain the numbers this run produced, and what each check means.
     """
     console.print()
     console.print(_bench_header(result))
@@ -537,10 +537,29 @@ def render_benchmark(
     console.print(Padding(_leaderboard(result), (0, 0, 1, 2)))
     console.print(Padding(_verdict(result), (0, 0, 1, 2)))
 
+    if explain:
+        notes = _teaching(result)
+        if notes is not None:
+            console.print(Padding(notes, (0, 0, 1, 2)))
+
     if result.checks:
         console.print(Padding(_findings_table(result.checks), (0, 0, 1, 2)))
         if explain:
             console.print(Padding(_explanations(result.checks), (0, 0, 1, 2)))
+
+
+def _teaching(result: BenchResult) -> RenderableType | None:
+    """Explain this run's own numbers, not confidence intervals in general."""
+    from michi.report.teaching import teaching_notes
+
+    notes = teaching_notes(result)
+    if not notes:
+        return None
+
+    blocks: list[RenderableType] = [Text("Reading these numbers", style="bold"), Text()]
+    for note in notes:
+        blocks.append(Padding(Text(note), (0, 0, 1, 2)))
+    return Group(*blocks)
 
 
 def _bench_header(result: BenchResult) -> RenderableType:
