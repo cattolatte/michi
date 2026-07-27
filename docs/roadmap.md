@@ -20,6 +20,29 @@ edges, in plugins, rather than in the core.
 | **v0.7** | `ui` | Local, read-only viewer over recorded runs. |
 | **v0.8** | plugins | Entry-point discovery for models and model loaders, with a published compatibility suite plugin authors run themselves. |
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
+| **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
+
+## Known gaps
+
+Stated plainly, because a roadmap that only lists wins is marketing.
+
+**Target encoding.** The highest-value categorical encoding for tabular ML,
+and the one most likely to leak. scikit-learn deprecated the parameter that
+makes `TargetEncoder` reproducible in 1.9 and removes it in 1.11; the
+replacement needs a newer scikit-learn than michi's `>=1.4` floor. The
+implementation is straightforward — the fitted/deterministic split already
+puts it in the right place — but a step whose output changes between runs
+would break the reproducibility everything else rests on. It ships when the
+floor moves.
+
+**Hyperparameter search is grid-only.** `sweep` enumerates models × recipes ×
+seeds. Bayesian or successive-halving search would be a real addition, and
+would need an ADR: it introduces an optimiser with an opinion, which is close
+to the line michi draws.
+
+**Deliberately absent, not missing:** deep-learning training loops, model
+serving, monitoring, cloud anything. These are non-goals under PLAN §3 and
+§11, not work that has not happened yet.
 
 ## Artifacts
 

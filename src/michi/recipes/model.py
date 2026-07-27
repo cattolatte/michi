@@ -31,6 +31,7 @@ RECIPE_SCHEMA_VERSION = "1.0"
 """Schema version of the recipe artifact. Frozen under semver at michi 1.0."""
 
 _KNOWN_OPS: dict[str, frozenset[str]] = {
+    # Cleaning.
     "drop": frozenset({"columns"}),
     "dedupe": frozenset({"subset"}),
     "cast": frozenset({"columns", "to"}),
@@ -38,6 +39,14 @@ _KNOWN_OPS: dict[str, frozenset[str]] = {
     "clip": frozenset({"columns", "lower_quantile", "upper_quantile"}),
     "encode": frozenset({"columns", "method"}),
     "scale": frozenset({"columns", "method"}),
+    # Feature engineering. Added in michi 1.1; the schema shape is unchanged,
+    # so a 1.0 recipe still loads and a 1.0 michi rejects these by name rather
+    # than misreading them.
+    "datepart": frozenset({"columns", "parts"}),
+    "log": frozenset({"columns", "method"}),
+    "interact": frozenset({"columns", "method"}),
+    "binarize": frozenset({"columns", "threshold"}),
+    "bin": frozenset({"columns", "bins", "strategy"}),
 }
 
 
@@ -48,8 +57,9 @@ class RecipeStep:
     Parameters
     ----------
     op
-        Operation name — one of ``drop``, ``dedupe``, ``cast``, ``impute``,
-        ``clip``, ``encode``, ``scale``.
+        Operation name. Cleaning: ``drop``, ``dedupe``, ``cast``, ``impute``,
+        ``clip``, ``encode``, ``scale``. Feature engineering: ``datepart``,
+        ``log``, ``interact``, ``binarize``, ``bin``.
     params
         Operation-specific parameters.
     why
@@ -91,11 +101,25 @@ class RecipeStep:
     def is_fitted(self) -> bool:
         """Whether this step learns something from the data it sees.
 
-        Fitted steps — imputation, encoding, scaling — must be fitted on
-        training data only. Deterministic steps can be applied anywhere
-        without risk of leakage.
+        Fitted steps — imputation, encoding, scaling, quantile binning —
+        must be fitted on training data only. Deterministic steps depend only
+        on the row in front of them and can be applied anywhere without risk
+        of leakage.
+
+        The distinction is not cosmetic. Quantile bin edges learned from the
+        whole dataset have already seen the test fold's distribution.
+        Classifying a step here is what puts it inside the cross-validation
+        fold in :func:`~michi.recipes.pipeline.build_transformer` and inside
+        ``build_pipeline()`` in exported code.
+
+        Examples
+        --------
+        >>> RecipeStep("log", {"columns": ["fare"]}).is_fitted
+        False
+        >>> RecipeStep("bin", {"columns": ["age"]}).is_fitted
+        True
         """
-        return self.op in {"impute", "encode", "scale"}
+        return self.op in {"impute", "encode", "scale", "bin"}
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a JSON/YAML-compatible dictionary."""

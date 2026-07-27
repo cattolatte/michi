@@ -1,29 +1,35 @@
 
-    道   michi 1.0.2
+  ███╗   ███╗██╗ ██████╗██╗  ██╗██╗
+  ████╗ ████║██║██╔════╝██║  ██║██║
+  ██╔████╔██║██║██║     ███████║██║      道 
+  ██║╚██╔╝██║██║██║     ██╔══██║██║
+  ██║ ╚═╝ ██║██║╚██████╗██║  ██║██║
+  ╚═╝     ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝
 
-   automate implementation, never judgement
+        =[ michi v1.1.0  ·  a local-first ML workbench                        ]
++ -- --=[ 9 verbs  ·  14 models  ·  12 recipe ops  ·  26 explanations        ]
++ -- --=[ 19 console commands  ·  no account, no telemetry, no network call  ]
 
-   help lists commands · use <file> loads data
-   Tab completes · Ctrl-D exits
+  心得  michi lists the options; you choose.
+  path walks the stages · help lists commands · use <file> loads data
+
+  tip: `clean` never modifies your data. It writes a recipe; `apply` produces a
+       new file, always at a path you name.
 
 michi › use data/customers.csv
 loaded customers.csv — 14 columns
 michi (customers.csv) › set target purchased
 target = purchased
-michi (customers.csv → purchased) › show context
+michi (customers.csv → purchased) › path
 
-setting    value             
-─────────────────────────────
-data       data/customers.csv
-target     purchased         
-recipe     —                 
-runs_dir   runs              
-models     linear,rf,hist-gbm
-seed       0                 
-cv         5                 
-  unsaved — `save` writes these to michi.toml
-
-michi (customers.csv → purchased) › history --export session.sh
-  wrote session.sh — a replayable script of one-shot michi commands
-
+  ✓   見   miru — see what you have             inspect   inspect --explain                 
+  ✓   整   totonoeru — decide what to fix       clean     clean --target <col>              
+  ✓   直   naosu — produce the fixed data       apply     apply -o clean.parquet            
+  ✓   比   kuraberu — compare models honestly   bench     bench --models …                  
+  ✓   確   tashikameru — verify one model       eval      eval <model.pkl>                  
+  ✓   探   sagasu — search a grid               sweep     sweep sweep.yaml                  
+  ·   記   shirusu — write up what happened     report    report runs/                      
+  ✓   出   dasu — take the code and go          export    export -o pipeline.py             
+  ✓ marks a stage this context can run right now. Every stage stands alone —
+  run one and stop, or none of them. michi walks none of it for you.
 

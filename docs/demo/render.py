@@ -46,9 +46,29 @@ class Scene:
 _SEVERITY = {"high": HIGH, "warn": WARN, "info": MUTED}
 
 
+_BLOCK_CHARS = set("█╗║╔╝╚═ ")
+
+
 def _style(text: str) -> str:
     """Colour a line of michi output by what it is."""
     escaped = html.escape(text)
+
+    # The banner's block capitals, and the seal riding the third row. Matched
+    # by character class rather than by position so the art can be re-cut
+    # without the renderer needing to know its shape.
+    stripped_raw = text.strip()
+    if stripped_raw and set(text) <= _BLOCK_CHARS | {"道"}:
+        return f'<tspan fill="{ACCENT}" font-weight="700">{escaped}</tspan>'
+
+    # The inventory block: chrome dim, contents readable.
+    brackets = re.match(r"^([+\- ]*=\[)(.*)(\])\s*$", escaped)
+    if brackets:
+        opening, body, closing = brackets.groups()
+        return (
+            f'<tspan fill="{DIM}">{opening}</tspan>'
+            f'<tspan fill="{MUTED}">{body}</tspan>'
+            f'<tspan fill="{DIM}">{closing}</tspan>'
+        )
 
     match = re.match(r"^(\s*)(high|warn|info)(\s.*)$", escaped)
     if match:
@@ -76,8 +96,18 @@ def _style(text: str) -> str:
         return escaped.replace(
             "Verdict", f'<tspan fill="{INK}" font-weight="700">Verdict</tspan>', 1
         )
-    if stripped.startswith("道"):
+    if stripped.startswith(("道", "心得")):
         return f'<tspan fill="{ACCENT}" font-weight="700">{escaped}</tspan>'
+    if stripped.startswith(("tip:", "✓ marks", "run one and stop")):
+        return f'<tspan fill="{DIM}">{escaped}</tspan>'
+    if stripped[:1] in {"✓", "·"} and "  " in stripped:
+        # A `path` row: the mark carries the state, the rest is a label. The
+        # leading indent is preserved separately — partitioning the padded
+        # line would hand back an empty mark and colour nothing.
+        lead = escaped[: len(escaped) - len(escaped.lstrip())]
+        mark, rest = stripped[0], stripped[1:]
+        colour = GOOD if mark == "✓" else DIM
+        return f'{lead}<tspan fill="{colour}" font-weight="700">{mark}</tspan>{rest}'
     if "leader" in escaped and "tied" not in escaped:
         return escaped.replace(
             "leader", f'<tspan fill="{GOOD}" font-weight="600">leader</tspan>', 1

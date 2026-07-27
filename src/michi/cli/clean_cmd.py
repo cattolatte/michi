@@ -71,6 +71,31 @@ def clean_command(
         list[str] | None,
         typer.Option("--scale", help="COLUMN=standard|minmax|robust."),
     ] = None,
+    datepart: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--datepart",
+            help="COLUMN=year+month+day+dayofweek+dayofyear+quarter+hour+week.",
+        ),
+    ] = None,
+    log: Annotated[
+        list[str] | None,
+        typer.Option("--log", help="COLUMN=log1p|signed — compress a long tail."),
+    ] = None,
+    interact: Annotated[
+        str | None,
+        typer.Option(
+            "--interact", help="Comma-separated columns to multiply pairwise."
+        ),
+    ] = None,
+    binarize: Annotated[
+        list[str] | None,
+        typer.Option("--binarize", help="COLUMN=THRESHOLD — above it, or not."),
+    ] = None,
+    bin_: Annotated[
+        list[str] | None,
+        typer.Option("--bin", help="COLUMN=N[:quantile|uniform] — discretise."),
+    ] = None,
     no_input: Annotated[
         bool,
         typer.Option("--no-input", help="Never prompt; use only the flags given."),
@@ -116,7 +141,22 @@ def clean_command(
             console.print(f"  [dim]{note}[/]")
         profile = profile_table(table, target=target)
 
-        flags_given = any([drop, dedupe, cast, impute, clip, encode, scale])
+        flags_given = any(
+            [
+                drop,
+                dedupe,
+                cast,
+                impute,
+                clip,
+                encode,
+                scale,
+                datepart,
+                log,
+                interact,
+                binarize,
+                bin_,
+            ]
+        )
         if flags_given or no_input:
             recipe = recipe_from_flags(
                 profile,
@@ -127,6 +167,11 @@ def clean_command(
                 clip=_split(clip),
                 encode=_pairs(encode, "encode"),
                 scale=_pairs(scale, "scale"),
+                datepart=_pairs(datepart, "datepart"),
+                log=_pairs(log, "log"),
+                interact=_split(interact),
+                binarize=_pairs(binarize, "binarize"),
+                bin_=_pairs(bin_, "bin"),
                 target=target,
             )
         else:

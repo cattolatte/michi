@@ -67,49 +67,90 @@ def _module_header(
         "Two pieces, because they carry different risks:",
         "",
         f"* ``prepare`` applies the {len(deterministic)} deterministic step(s):",
-        "  dropping, deduplicating, casting, clipping. These depend only on the",
-        "  row in front of them, so they are safe to run on any data at any time.",
+        "  dropping, casting, clipping, and the feature engineering that depends",
+        "  only on the row in front of it. Safe to run on any data at any time.",
         "",
         f"* ``build_pipeline`` returns an sklearn Pipeline for the {len(fitted)}",
-        "  fitted step(s): imputation, encoding, scaling. These *learn* from the",
-        "  data they see, so they belong inside cross-validation, where they",
-        "  cannot observe the fold they will be scored on.",
+        "  fitted step(s): imputation, encoding, scaling, binning. These",
+        "  *learn* from the data they see, so they belong inside",
+        "  cross-validation, where they cannot observe the fold they will be",
+        "  scored on. Quantile bin edges learned from everything have already",
+        "  seen the test fold's distribution.",
         '"""',
         "",
         "from __future__ import annotations",
         "",
-        "import pandas as pd",
-        *_sklearn_imports(fitted),
+        *_imports(deterministic, fitted),
         "",
         "",
     ]
 
 
-def _sklearn_imports(fitted: tuple[RecipeStep, ...]) -> list[str]:
-    if not fitted:
-        return []
-    needed: set[str] = set()
+def _imports(
+    deterministic: tuple[RecipeStep, ...], fitted: tuple[RecipeStep, ...]
+) -> list[str]:
+    """Emit the import block, already in the order the formatter wants.
+
+    Generated code has to pass the same import sort michi's own source does,
+    so the grouping and ordering are reproduced here rather than left to luck:
+    standard library, then plain ``import`` lines, then ``from`` lines, each
+    alphabetical, with names from one module collapsed onto one line.
+    """
+    stdlib = (
+        ["from itertools import combinations"]
+        if _uses("interact", deterministic)
+        else []
+    )
+
+    plain = ["import pandas as pd"]
+    if _uses("log", deterministic) or _uses("interact", deterministic):
+        plain.append("import numpy as np")
+
+    modules: dict[str, set[str]] = {}
     for step in fitted:
-        if step.op == "impute":
-            needed.add("from sklearn.impute import SimpleImputer")
-        elif step.op == "encode":
-            method = str(step.params.get("method", "onehot"))
-            needed.add(
-                "from sklearn.preprocessing import OneHotEncoder"
-                if method == "onehot"
-                else "from sklearn.preprocessing import OrdinalEncoder"
-            )
-        elif step.op == "scale":
-            method = str(step.params.get("method", "standard"))
-            scaler = {
-                "standard": "StandardScaler",
-                "minmax": "MinMaxScaler",
-                "robust": "RobustScaler",
-            }.get(method, "StandardScaler")
-            needed.add(f"from sklearn.preprocessing import {scaler}")
-    needed.add("from sklearn.compose import ColumnTransformer")
-    needed.add("from sklearn.pipeline import Pipeline")
-    return sorted(needed)
+        module, name = _transformer_import(step)
+        if module:
+            modules.setdefault(module, set()).add(name)
+    if fitted:
+        modules.setdefault("sklearn.compose", set()).add("ColumnTransformer")
+        modules.setdefault("sklearn.pipeline", set()).add("Pipeline")
+
+    grouped = [
+        f"from {module} import {', '.join(sorted(names))}"
+        for module, names in sorted(modules.items())
+    ]
+
+    block = (
+        [*stdlib, "", *sorted(plain), *grouped]
+        if stdlib
+        else [*sorted(plain), *grouped]
+    )
+    return block
+
+
+def _uses(op: str, steps: tuple[RecipeStep, ...]) -> bool:
+    return any(step.op == op for step in steps)
+
+
+def _transformer_import(step: RecipeStep) -> tuple[str, str]:
+    """The module and name a fitted step's transformer comes from."""
+    if step.op == "impute":
+        return "sklearn.impute", "SimpleImputer"
+    if step.op == "encode":
+        method = str(step.params.get("method", "onehot"))
+        name = "OneHotEncoder" if method == "onehot" else "OrdinalEncoder"
+        return "sklearn.preprocessing", name
+    if step.op == "scale":
+        method = str(step.params.get("method", "standard"))
+        name = {
+            "standard": "StandardScaler",
+            "minmax": "MinMaxScaler",
+            "robust": "RobustScaler",
+        }.get(method, "StandardScaler")
+        return "sklearn.preprocessing", name
+    if step.op == "bin":
+        return "sklearn.preprocessing", "KBinsDiscretizer"
+    return "", ""
 
 
 def _prepare_function(steps: tuple[RecipeStep, ...]) -> list[str]:
@@ -234,6 +275,88 @@ def _render_deterministic(step: RecipeStep) -> list[str]:
             f"            upper=values.quantile({upper}),",
             "        )",
         ]
+    if step.op == "datepart":
+        from michi.recipes.apply import DEFAULT_DATE_PARTS
+
+        parts = [str(item) for item in step.params.get("parts") or DEFAULT_DATE_PARTS]
+        return [
+            f"    # Expand {len(step.columns)} timestamp(s) into "
+            f"{len(parts)} component(s).",
+            "    # A raw datetime is one enormous integer; the signal is in its parts.",
+            *_wrapped_list(
+                list(step.columns), indent="    ", prefix="for column in ", suffix=":"
+            ),
+            "        stamps = pd.to_datetime("
+            'frame[column], errors="coerce", format="mixed")',
+            *_wrapped_list(parts, indent="        ", prefix="for part in ", suffix=":"),
+            # `week` is the one part pandas does not expose on `.dt`. The
+            # branch is emitted only when it was actually asked for: dead code
+            # in a file meant to be read is worse than a longer emitter.
+            *(
+                [
+                    '            if part == "week":',
+                    "                values = stamps.dt.isocalendar().week",
+                    "            else:",
+                    "                values = getattr(stamps.dt, part)",
+                ]
+                if "week" in parts
+                else ["            values = getattr(stamps.dt, part)"]
+            ),
+            '            frame[f"{column}_{part}"] = pd.to_numeric('
+            'values, errors="coerce")',
+        ]
+    if step.op == "log":
+        method = str(step.params.get("method", "log1p"))
+        body = (
+            [
+                "        frame[column] = np.sign(values) * np.log1p(values.abs())",
+            ]
+            if method == "signed"
+            else [
+                "        frame[column] = np.log1p(values.where(values >= 0))",
+            ]
+        )
+        return [
+            f"    # Compress a long right tail on {len(step.columns)} column(s).",
+            *_wrapped_list(
+                list(step.columns), indent="    ", prefix="for column in ", suffix=":"
+            ),
+            '        values = pd.to_numeric(frame[column], errors="coerce")',
+            *body,
+        ]
+    if step.op == "interact":
+        method = str(step.params.get("method", "product"))
+        expression = (
+            "first / second.replace(0, np.nan)"
+            if method == "ratio"
+            else "first * second"
+        )
+        suffix = "_over_" if method == "ratio" else "_x_"
+        return [
+            f"    # Pairwise {method}s of {len(step.columns)} column(s).",
+            "    # A linear model cannot represent a combination it was not handed.",
+            *_wrapped_list(
+                list(step.columns),
+                indent="    ",
+                prefix="for left, right in combinations(",
+                suffix=", 2):",
+            ),
+            '        first = pd.to_numeric(frame[left], errors="coerce")',
+            '        second = pd.to_numeric(frame[right], errors="coerce")',
+            f'        frame[f"{{left}}{suffix}{{right}}"] = {expression}',
+        ]
+    if step.op == "binarize":
+        threshold = float(step.params.get("threshold", 0.0))
+        return [
+            f"    # Reduce {len(step.columns)} column(s) to above/below {threshold}.",
+            "    # A missing value stays missing rather than becoming False.",
+            *_wrapped_list(
+                list(step.columns), indent="    ", prefix="for column in ", suffix=":"
+            ),
+            '        values = pd.to_numeric(frame[column], errors="coerce")',
+            f"        frame[column] = (values > {threshold})"
+            '.astype("float").where(values.notna())',
+        ]
     return [f"    # Unsupported step: {step.op}"]
 
 
@@ -262,7 +385,12 @@ def _pipeline_function(steps: tuple[RecipeStep, ...]) -> list[str]:
             lines.append(f"            # {step.why}")
         lines.append("            (")
         lines.append(f"                {_literal(f'{step.op}_{index}')},")
-        lines.append(f"                {_transformer(step)},")
+        # A transformer with enough arguments does not fit on one line at this
+        # indent, and the generated file has to satisfy the same formatter as
+        # michi's own source, so the emitter may hand back several lines.
+        rendered = _transformer(step).splitlines()
+        lines.extend(f"                {part}" for part in rendered[:-1])
+        lines.append(f"                {rendered[-1]},")
         lines.extend(
             _wrapped_list(
                 list(step.columns), indent="                ", prefix="", suffix=","
@@ -307,6 +435,21 @@ def _transformer(step: RecipeStep) -> str:
             "minmax": "MinMaxScaler()",
             "robust": "RobustScaler()",
         }.get(method, "StandardScaler()")
+    if step.op == "bin":
+        bins = int(step.params.get("bins", 5))
+        strategy = str(step.params.get("strategy", "quantile"))
+        # `subsample=None` because sklearn otherwise subsamples large inputs
+        # before computing quantile edges, which makes the bins depend on a
+        # random draw — and a recipe that produces different bins on the same
+        # data is not a recipe.
+        return (
+            "KBinsDiscretizer(\n"
+            f"    n_bins={bins},\n"
+            '    encode="ordinal",\n'
+            f'    strategy="{strategy}",\n'
+            "    subsample=None,\n"
+            ")"
+        )
     return '"passthrough"'
 
 

@@ -103,8 +103,12 @@ def render_path(session: object, console: object) -> None:
             stage.usage,
         )
 
+    from rich.padding import Padding
+
     console.print()  # type: ignore[attr-defined]
-    console.print(table)  # type: ignore[attr-defined]
+    # Padded to line up with the note underneath it, which is prose and so
+    # carries the same two-space margin every other console message does.
+    console.print(Padding(table, (0, 0, 0, 2)))  # type: ignore[attr-defined]
     console.print(  # type: ignore[attr-defined]
         "  [dim]✓ marks a stage this context can run right now. "
         "Every stage stands alone —[/]\n"

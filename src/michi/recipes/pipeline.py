@@ -5,10 +5,10 @@ Design Principles
 - **One meaning, three consumers.** ``apply`` executes a recipe with pandas,
   ``export`` writes it as source code, and this module hands it to
   cross-validation. All three must agree about what the recipe says.
-- **Deterministic and fitted steps travel separately.** Dropping and casting
-  can happen once, up front, with no risk. Imputing, encoding, and scaling
-  must be fitted per fold, so they become a transformer rather than a
-  mutation.
+- **Deterministic and fitted steps travel separately.** Dropping, casting,
+  and the feature engineering that reads only one row can happen once, up
+  front, with no risk. Imputing, encoding, scaling, and quantile binning must
+  be fitted per fold, so they become a transformer rather than a mutation.
 - michi never silently substitutes its own preparation for a recipe the user
   wrote: when a recipe supplies fitted steps, they are what runs.
 """
@@ -129,5 +129,18 @@ def _transformer_for(step: RecipeStep) -> Any | None:
             "minmax": MinMaxScaler(),
             "robust": RobustScaler(),
         }.get(method, StandardScaler())
+
+    if step.op == "bin":
+        from sklearn.preprocessing import KBinsDiscretizer
+
+        # `ordinal` keeps one column per input, so the recipe's column names
+        # survive into the fitted frame and the deterministic pass that ran
+        # before it stays readable in the output.
+        return KBinsDiscretizer(
+            n_bins=int(step.params.get("bins", 5)),
+            encode="ordinal",
+            strategy=str(step.params.get("strategy", "quantile")),
+            subsample=None,
+        )
 
     return None

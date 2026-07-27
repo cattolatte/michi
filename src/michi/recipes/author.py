@@ -127,6 +127,11 @@ def recipe_from_flags(
     clip: Sequence[str] = (),
     encode: Sequence[tuple[str, str]] = (),
     scale: Sequence[tuple[str, str]] = (),
+    datepart: Sequence[tuple[str, str]] = (),
+    log: Sequence[tuple[str, str]] = (),
+    interact: Sequence[str] = (),
+    binarize: Sequence[tuple[str, str]] = (),
+    bin_: Sequence[tuple[str, str]] = (),
     target: str | None = None,
 ) -> Recipe:
     """Assemble a recipe entirely from command-line flags.
@@ -160,6 +165,49 @@ def recipe_from_flags(
         steps.append(RecipeStep("encode", {"columns": [column], "method": method}))
     for column, method in scale:
         steps.append(RecipeStep("scale", {"columns": [column], "method": method}))
+
+    for column, parts in datepart:
+        steps.append(
+            RecipeStep(
+                "datepart",
+                {
+                    "columns": [column],
+                    "parts": [item for item in parts.split("+") if item],
+                },
+                why="requested with --datepart",
+            )
+        )
+    for column, method in log:
+        steps.append(
+            RecipeStep("log", {"columns": [column], "method": method}, why="skew")
+        )
+    for column, threshold in binarize:
+        steps.append(
+            RecipeStep("binarize", {"columns": [column], "threshold": float(threshold)})
+        )
+    for column, spec in bin_:
+        count, _, strategy = spec.partition(":")
+        steps.append(
+            RecipeStep(
+                "bin",
+                {
+                    "columns": [column],
+                    "bins": int(count),
+                    "strategy": strategy or "quantile",
+                },
+            )
+        )
+    if interact:
+        # One step over all named columns, not one per column: `interact`
+        # combines columns with each other, so splitting it would produce no
+        # pairs at all.
+        steps.append(
+            RecipeStep(
+                "interact",
+                {"columns": list(interact), "method": "product"},
+                why="requested with --interact",
+            )
+        )
 
     return Recipe(
         steps=_ordered(steps),
@@ -202,6 +250,24 @@ def command_for(recipe: Recipe, data_path: str) -> str:
         elif step.op == "scale":
             method = step.params.get("method", "standard")
             parts.extend(f"--scale {name}={method}" for name in columns)
+        elif step.op == "datepart":
+            pieces = "+".join(str(item) for item in step.params.get("parts") or ())
+            parts.extend(
+                f"--datepart {name}={pieces}" if pieces else f"--datepart {name}"
+                for name in columns
+            )
+        elif step.op == "log":
+            method = step.params.get("method", "log1p")
+            parts.extend(f"--log {name}={method}" for name in columns)
+        elif step.op == "binarize":
+            threshold = step.params.get("threshold", 0.0)
+            parts.extend(f"--binarize {name}={threshold}" for name in columns)
+        elif step.op == "bin":
+            count = step.params.get("bins", 5)
+            strategy = step.params.get("strategy", "quantile")
+            parts.extend(f"--bin {name}={count}:{strategy}" for name in columns)
+        elif step.op == "interact":
+            parts.append(f"--interact {','.join(columns)}")
     if drops:
         parts.insert(1, f"--drop {','.join(drops)}")
     if recipe.target:
@@ -595,10 +661,21 @@ _STEP_ORDER = {
     "drop": 0,
     "dedupe": 1,
     "cast": 2,
-    "impute": 3,
-    "clip": 4,
-    "encode": 5,
-    "scale": 6,
+    # Derivation sits between casting and imputation: `datepart` needs a real
+    # timestamp to read parts from, and the columns it creates should be
+    # available for imputation like any other.
+    "datepart": 3,
+    "impute": 4,
+    "clip": 5,
+    # Transformation of existing values, before anything derived from them.
+    "log": 6,
+    "binarize": 7,
+    "bin": 8,
+    # Interactions last among the derivations, so they multiply the final
+    # values rather than the raw ones.
+    "interact": 9,
+    "encode": 10,
+    "scale": 11,
 }
 
 
@@ -607,7 +684,8 @@ def _ordered(steps: list[RecipeStep]) -> tuple[RecipeStep, ...]:
 
     Dropping first avoids work on columns that are about to disappear; casting
     must precede imputation so that numbers-as-text can take a numeric fill;
-    encoding and scaling come last because they assume clean values.
+    encoding and scaling come last because they assume clean values. Feature
+    engineering slots in between: derive from clean values, then combine.
     """
     return tuple(sorted(steps, key=lambda step: _STEP_ORDER[step.op]))
 

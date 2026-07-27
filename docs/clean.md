@@ -82,7 +82,7 @@ When the session ends, michi prints the command that reproduces it:
 
 Nothing in michi exists only interactively.
 
-### Operations
+### Cleaning operations
 
 | Operation | Flag | What it does |
 |---|---|---|
@@ -94,8 +94,57 @@ Nothing in michi exists only interactively.
 | `encode` | `--encode col=onehot` | `onehot` or `ordinal` |
 | `scale` | `--scale col=standard` | `standard`, `minmax`, `robust` |
 
-Steps are ordered automatically — drop, dedupe, cast, impute, clip, encode,
-scale — so each can assume the previous ran.
+### Feature engineering
+
+Deriving a column is a decision worth recording, reviewing, and re-running —
+which is what a recipe is for. These are recipe operations like any other, so
+they inherit `apply`, `export`, and the fitted/deterministic split.
+
+| Operation | Flag | What it does |
+|---|---|---|
+| `datepart` | `--datepart col=year+month+dayofweek` | Expand a timestamp into components: `year`, `month`, `day`, `dayofweek`, `dayofyear`, `quarter`, `hour`, `week` |
+| `log` | `--log col=log1p` | Compress a long right tail. `signed` for columns with real negative values |
+| `interact` | `--interact a,b,c` | Pairwise products of the named numeric columns |
+| `binarize` | `--binarize col=0` | Reduce to above the threshold, or not |
+| `bin` | `--bin col=5:quantile` | Discretise into N bins — `quantile` or `uniform` |
+
+A raw datetime is close to useless to a model: it is one enormous integer, and
+the signal is almost always in its parts. A linear model cannot represent
+"high income *and* young" unless you hand it the product; a tree can, but only
+by spending depth on it.
+
+**`bin` is fitted, the rest are not.** Quantile edges are *learned* from the
+rows in front of them, so binning a whole file before splitting lets the test
+fold's distribution shape the bins. `export` puts `bin` inside
+`build_pipeline()` for that reason, and leaves the other four in `prepare()`.
+
+```bash
+michi clean data/customers.csv --target purchased \
+  --cast signup_date=datetime \
+  --datepart signup_date=year+month+dayofweek \
+  --log fare=log1p \
+  --interact fare,age \
+  --bin age=4:quantile
+```
+
+### Ordering
+
+Steps are ordered automatically, and the order is mechanical rather than
+editorial: drop → dedupe → cast → datepart → impute → clip → log → binarize →
+bin → interact → encode → scale.
+
+Casting precedes `datepart` because reading parts off a timestamp requires a
+real timestamp. `interact` comes after the value transforms so it multiplies
+the final values rather than the raw ones. Each step can assume the previous
+ran.
+
+**Not included: target encoding.** Replacing a category with the target's mean
+is the highest-value and most dangerous encoding in tabular ML, and michi does
+not ship it yet. scikit-learn deprecated the parameter that makes
+`TargetEncoder` reproducible in 1.9 and removes it in 1.11; the replacement
+needs a newer scikit-learn than michi's floor. Shipping a step whose output
+changes between runs would break the reproducibility the rest of the toolbox
+rests on, so it waits for the floor to move.
 
 ## `michi apply` — executing
 
@@ -182,7 +231,8 @@ than none.
 |---|---|
 | `--out`, `-o` | Where to write the recipe (default `michi.recipe.yaml`) |
 | `--target`, `-t` | Label column |
-| `--drop`, `--dedupe`, `--cast`, `--impute`, `--clip`, `--encode`, `--scale` | Operations, as above |
+| `--drop`, `--dedupe`, `--cast`, `--impute`, `--clip`, `--encode`, `--scale` | Cleaning operations, as above |
+| `--datepart`, `--log`, `--interact`, `--binarize`, `--bin` | Feature engineering, as above |
 | `--no-input` | Never prompt; use only the flags given |
 | `--sample` / `--full` / `--seed` | Sampling for large files |
 

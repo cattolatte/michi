@@ -6,6 +6,53 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-27
+
+Feature engineering, and a path through the toolbox.
+
+### Added
+- **Five feature-engineering recipe operations.** `datepart` expands a
+  timestamp into the components a model can actually use; `log` compresses a
+  long right tail (`signed` for columns that genuinely go below zero);
+  `interact` adds pairwise products or ratios; `binarize` reduces a column to
+  above-a-threshold-or-not; `bin` discretises into quantile or uniform bins.
+  Each is a recipe step like any other, so it inherits `apply`, `export`, and
+  the fitted/deterministic split — `bin` learns its edges from data and is
+  therefore fitted inside the cross-validation fold, while the other four run
+  in `prepare()`.
+- **`path`** — the stages of a tabular project, the command covering each, and
+  a mark on the ones the current context could run right now. It executes
+  nothing.
+- **`walk`** — the stages one at a time, offering run / skip / stop at each.
+  It asks and never suggests: no stage ranks the options or marks one
+  recommended, the default is skip, and every stage prints the one-shot command
+  it ran. ADR-0003 records the five constraints that keep a guided sequence
+  from becoming workflow ownership; ADR-0001 stands.
+- A console banner with a live inventory. The verb, model, operation, and
+  explanation counts are read from the registries at startup rather than
+  typed, so they cannot go stale — and none of those registries import pandas
+  or scikit-learn, so the console still opens instantly.
+
+### Fixed
+- **`sweep` was unreachable from the console.** It was a verb of the CLI with
+  no console entry, which is the flag-parity rule broken in the direction
+  nobody checks.
+- **The reproducing command printed by `clean` wrapped back to the left
+  margin**, so a command too wide for the terminal read as two commands and
+  got copied as one.
+- A `ratio` interaction divided by zero into `pd.NA`, which forced the column
+  to object dtype — precisely what a downstream estimator cannot consume.
+
+### Notes
+- **Target encoding is deliberately not included.** scikit-learn deprecated
+  the parameter that makes `TargetEncoder` reproducible in 1.9 and removes it
+  in 1.11; the replacement requires a newer scikit-learn than michi's floor.
+  A step whose output changes between runs would break the reproducibility the
+  rest of the toolbox rests on, so it waits for the floor to move.
+- The recipe schema stays at 1.0. The new operations are additive vocabulary:
+  a recipe written before them still loads, and an older michi meeting a newer
+  recipe fails loudly by name rather than misreading it.
+
 ## [1.0.2] — 2026-07-27
 
 ### Fixed

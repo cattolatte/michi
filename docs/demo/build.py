@@ -35,9 +35,13 @@ def generated(marker: str, count: int) -> list[str]:
     return [f"  {line}".rstrip() for line in lines[start : start + count]]
 
 
+_PATH_PROMPT = "michi (customers.csv → purchased) › path"
+
+
 def main() -> None:
     """Assemble the scenes and write the SVG."""
     inspect = read("inspect")
+    console = read("console")
     findings_at = next(
         index
         for index, line in enumerate(inspect)
@@ -88,11 +92,21 @@ def main() -> None:
         ),
         Scene(
             command="michi        # no arguments opens the console",
-            output=read("console"),
-            hold=5.6,
+            # Up to the `path` prompt; the map itself gets its own scene, so
+            # neither has to be squeezed into a panel sized for the other.
+            output=console[: console.index(_PATH_PROMPT) + 1],
+            hold=5.4,
             note=(
                 "Tab completes your own column names — "
                 "the one thing a one-shot CLI cannot do"
+            ),
+        ),
+        Scene(
+            command="path        # the stages, and what this context can run",
+            output=console[console.index(_PATH_PROMPT) + 1 :],
+            hold=5.6,
+            note=(
+                "a map, not a driver — `walk` asks its way through, one stage at a time"
             ),
         ),
     ]
