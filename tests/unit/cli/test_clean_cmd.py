@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import takewhile
 from pathlib import Path
 
 import pandas as pd
@@ -62,6 +63,40 @@ def test_clean_prints_the_reproducing_command(messy_csv: Path, tmp_path: Path) -
     )
     assert "To reproduce" in result.output
     assert "--impute salary=median" in result.output.replace("\n", " ")
+
+
+def test_the_reproducing_command_stays_indented_when_it_wraps(
+    messy_csv: Path, tmp_path: Path
+) -> None:
+    """A command too wide for the terminal must still read as one command.
+
+    Continuation lines that fall back to the left margin look like a second
+    command, and get copied as one.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "clean",
+            str(messy_csv),
+            "--drop",
+            "notes,country,country_copy,record_id,outcome_code,age_months",
+            "--cast",
+            "amount_text=numeric",
+            "--cast",
+            "signup_date=datetime",
+            "--impute",
+            "salary=median",
+            "--clip",
+            "fare",
+            "-o",
+            str(tmp_path / "r.yaml"),
+        ],
+    )
+    lines = result.output.splitlines()
+    start = next(i for i, line in enumerate(lines) if "To reproduce" in line)
+    wrapped = list(takewhile(lambda line: line.strip(), lines[start + 1 :]))
+    assert len(wrapped) > 1, "the command should be long enough to wrap"
+    assert len({len(line) - len(line.lstrip()) for line in wrapped}) == 1
 
 
 def test_clean_accepts_repeated_pair_options(messy_csv: Path, tmp_path: Path) -> None:

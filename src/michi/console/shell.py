@@ -53,15 +53,23 @@ _COMMON_FLAGS = [
 
 
 def banner() -> str:
-    """The console banner: one screen, no more."""
+    """The console banner.
+
+    A 印 (*in*) — the vermilion seal a craftsman presses onto finished work —
+    rather than a wall of ASCII art. Six lines, most of them empty: the
+    restraint is the point, and a banner that fills the screen is a banner the
+    user learns to scroll past.
+    """
+    # Every line is indented the same amount: the kanji is double-width in
+    # some terminals and single in others, so hanging alignment off it would
+    # look correct on this machine and ragged on someone else's.
     return f"""
-        [bold red]道[/]  [bold]michi[/] [dim]v{__version__}[/]
+   [bold white on red] 道 [/]  [bold]michi[/] [dim]{__version__}[/]
 
-        [dim]a local-first ML workbench — automate implementation,
-        never judgement[/]
+   [dim]automate implementation, never judgement[/]
 
-        [dim]`help` lists commands · `use <file>` loads data ·
-        Tab completes · Ctrl-D exits[/]
+   [dim]help[/] [dim]lists commands[/] · [dim]use <file>[/] [dim]loads data[/]
+   [dim]Tab completes · Ctrl-D exits[/]
 """
 
 
@@ -88,7 +96,9 @@ def run_console(session: Session | None = None) -> int:
         )
         return 2
 
-    console.print(banner())
+    # Rich's highlighter would tint the version number and angle brackets;
+    # the banner is composed, not data.
+    console.print(banner(), highlight=False)
     if state.data:
         console.print(f"  [dim]context restored from michi.toml — {state.data}[/]\n")
 

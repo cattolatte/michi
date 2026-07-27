@@ -1,0 +1,52 @@
+
+ 道  michi inspect  ·  customers.csv
+
+  600 rows × 14 columns  ·  14.5% of cells missing  ·  0 duplicate rows  ·      
+  target purchased                                                              
+  sha256 0dbfe06c8719  ·  42.0 KB                                               
+                                                                                
+  column         kind          missing   unique   summary                       
+  ──────────────────────────────────────────────────────────────────────────────
+  age            numeric             —       45   mean 42.702  ·  range 20–64   
+  salary         numeric         13.5%      511   mean 39,357.938  ·  range     
+                                                  19,798–56,542  ·  1 outliers  
+  region         categorical         —        4   top: north (239), south (188),
+                                                  east (117)                    
+  cabin          categorical     89.0%       66   top: C13 (1), C37 (1), C38 (1)
+  notes          empty          100.0%        0                                 
+  country        categorical         —        1   top: JP (600)                 
+  country_copy   categorical         —        1   top: JP (600)                 
+  record_id      text                —      600   length 7–7                    
+  fare           numeric             —      467   mean 210.883  ·  range        
+                                                  5.29–10,000  ·  skew +6.87  · 
+                                                  37 outliers                   
+  amount_text    text                —      598   length 5–6                    
+  signup_date    categorical         —       11   top: 2024-01-15 (55),         
+                                                  2024-02-15 (55), 2024-03-15   
+                                                  (55)                          
+  age_months     numeric             —       45   mean 512.42  ·  range 240–768 
+  outcome_code   categorical         —        2   top: class-0 (363), class-1   
+                                                  (237)                         
+  purchased      numeric             —        2   mean 0.395  ·  range 0–1      
+                                                                                
+  Findings (14)                                                                 
+                                                                                
+  high    country                only one distinct value (JP)                   
+  high    country_copy           only one distinct value (JP)                   
+  high    notes                  every value is missing                         
+  high    cabin                  89.0% missing (534 of 600)                     
+  high    outcome_code           each of its 2 values maps to exactly one       
+                                 'purchased' class                              
+  warn    signup_date            values parse as dates but are stored as text   
+  warn    country, country_copy  identical values in country, country_copy      
+  warn    cabin                  66 distinct values across 66 rows              
+  warn    fare                   skew 6.87 (right-tailed)                       
+  warn    age, age_months        correlation +1.000                             
+  warn    salary                 13.5% missing (81 of 600)                      
+  warn    amount_text            100% of values parse as numbers                
+  warn    fare                   37 values beyond 1.5×IQR (6.2%)                
+  info    record_id              every value is distinct (looks like an         
+                                 identifier)                                    
+                                                                                
+  Run again with --explain for what each finding means and your options.        
+                                                                                

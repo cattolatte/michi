@@ -17,6 +17,12 @@
 [![mypy](https://img.shields.io/badge/mypy-strict-2a6db2)](https://mypy-lang.org/)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
+<br>
+
+<img src="docs/demo.svg" alt="michi: inspect a dataset, clean it, compare models, export code" width="100%">
+
+<sub>Recorded, not mocked up — every line above came from an actual run.</sub>
+
 </div>
 
 <br>

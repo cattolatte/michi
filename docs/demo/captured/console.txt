@@ -1,0 +1,29 @@
+
+    道   michi 1.0.2
+
+   automate implementation, never judgement
+
+   help lists commands · use <file> loads data
+   Tab completes · Ctrl-D exits
+
+michi › use data/customers.csv
+loaded customers.csv — 14 columns
+michi (customers.csv) › set target purchased
+target = purchased
+michi (customers.csv → purchased) › show context
+
+setting    value             
+─────────────────────────────
+data       data/customers.csv
+target     purchased         
+recipe     —                 
+runs_dir   runs              
+models     linear,rf,hist-gbm
+seed       0                 
+cv         5                 
+  unsaved — `save` writes these to michi.toml
+
+michi (customers.csv → purchased) › history --export session.sh
+  wrote session.sh — a replayable script of one-shot michi commands
+
+

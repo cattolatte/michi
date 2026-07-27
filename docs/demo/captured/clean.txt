@@ -1,0 +1,17 @@
+
+  wrote recipe.yaml  ·  5 step(s)                                                           
+    · drop  notes, country, country_copy, record_id, outcome_code +1                        
+    · cast  amount_text                                                                     
+    · cast  signup_date                                                                     
+    · impute  salary                                                                        
+    · clip  fare                                                                            
+                                                                                            
+                                                                                            
+  To reproduce this without the prompts:                                                    
+    michi clean data/customers.csv --drop                                                   
+    notes,country,country_copy,record_id,outcome_code,age_months --cast amount_text=numeric 
+    --cast signup_date=datetime --impute salary=median --clip fare --target purchased       
+                                                                                            
+  Next:  michi apply recipe.yaml data/customers.csv -o clean.parquet                        
+         michi export recipe.yaml -o pipeline.py                                            
+                                                                                            

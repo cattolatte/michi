@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from rich.console import Console
+from rich.console import Console, Group
 from rich.padding import Padding
 from rich.text import Text
 
@@ -351,13 +351,17 @@ def _summary(recipe, output: Path) -> Text:  # type: ignore[no-untyped-def]
     return text
 
 
-def _reproduce(recipe, data_path: str) -> Text:  # type: ignore[no-untyped-def]
+def _reproduce(recipe, data_path: str) -> Group:  # type: ignore[no-untyped-def]
     from michi.recipes import command_for
 
-    text = Text()
-    text.append("To reproduce this without the prompts:\n", style="dim")
-    text.append(f"  {command_for(recipe, data_path)}", style="cyan")
-    return text
+    # The command is indented with Padding rather than a literal prefix, so a
+    # command too long for the terminal keeps every wrapped line under the
+    # first. A continuation that falls back to the margin reads like a second
+    # command, and gets copied as one.
+    return Group(
+        Text("To reproduce this without the prompts:", style="dim"),
+        Padding(Text(command_for(recipe, data_path), style="cyan"), (0, 0, 0, 2)),
+    )
 
 
 # --- helpers ---------------------------------------------------------------

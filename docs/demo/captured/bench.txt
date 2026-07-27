@@ -1,0 +1,28 @@
+
+ 道  michi bench  ·  4 models
+
+  classification  ·  600 rows  ·  5-fold cross-validation  ·  target purchased  
+  preparation: numeric: impute median · categorical: impute most_frequent +     
+  onehot · standardise (scale-sensitive models only) — fitted inside each fold  
+  seed 0  ·  3.9s                                                               
+                                                                                
+  Results  (ranked by balanced_accuracy)                                        
+                                                                                
+  model      balanced_accuracy      95% interval   vs leader                 fit
+  ──────────────────────────────────────────────────────────────────────────────
+  linear                 0.892   0.8599 – 0.9241   leader                   0.4s
+  rf                     0.878   0.8323 – 0.9235   tied with leader         0.9s
+                                                   (p=0.589)                    
+  hist-gbm               0.875     0.83 – 0.9192   tied with leader         1.9s
+                                                   (p=0.589)                    
+  dummy                    0.5         0.5 – 0.5   worse (p<0.0001)         0.0s
+                                                                                
+  Verdict  linear scores highest, but rf, hist-gbm are statistically            
+  indistinguishable from it at this sample size. Choosing between them on these 
+  numbers alone is not supported.                                               
+                                                                                
+  Findings (1)                                                                  
+                                                                                
+  warn    dataset  2 model(s) are not statistically distinguishable from linear:
+                   rf, hist-gbm                                                 
+                                                                                

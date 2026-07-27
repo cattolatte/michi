@@ -85,7 +85,7 @@ src = ["src", "tests"]
 # michi's terminal and HTML output is typographic on purpose: en dashes for
 # numeric ranges, arrows for date ranges, middots as separators. These are
 # deliberate output characters, not homoglyph mistakes.
-allowed-confusables = ["–", "—", "→", "·", "×", "≈", "±", "›", "╲"]
+allowed-confusables = ["–", "—", "→", "·", "×", "≈", "±", "›", "❯", "╲"]
 select = [
   "E",   # pycodestyle errors
   "W",   # pycodestyle warnings
