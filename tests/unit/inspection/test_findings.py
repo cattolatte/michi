@@ -160,3 +160,32 @@ def test_tiny_dataset_is_reported(tmp_path: Path) -> None:
     path = tmp_path / "tiny.csv"
     pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).to_csv(path, index=False)
     assert "tiny-dataset" in _kinds(path)
+
+
+# --- capped analyses -------------------------------------------------------
+
+
+def test_a_skipped_pairwise_check_is_reported(tmp_path: Path) -> None:
+    """Silence would read as "nothing found", which is a different claim.
+
+    Pairwise checks are capped on very wide data. Skipping them quietly would
+    let a user conclude there are no duplicate columns when michi never
+    looked.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    rows = 60
+    frame = pd.DataFrame({f"c{index}": rng.normal(0, 1, rows) for index in range(250)})
+    path = tmp_path / "wide.csv"
+    frame.to_csv(path, index=False)
+
+    profile = profile_table(load_table(path))
+    skipped = [f for f in profile.findings if f.kind == "analysis-skipped"]
+    assert skipped
+    assert "duplicate columns" in " ".join(f.summary for f in skipped)
+
+
+def test_narrow_data_runs_every_check(messy_csv: Path) -> None:
+    """Nothing is skipped at ordinary widths, so nothing is reported skipped."""
+    assert "analysis-skipped" not in _kinds(messy_csv)

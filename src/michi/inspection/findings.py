@@ -281,7 +281,10 @@ def _duplicate_columns(frame: pd.DataFrame) -> list[Finding]:
     import pandas as pd
 
     if frame.shape[1] > _MAX_PAIRWISE_COLUMNS:
-        return []
+        # Skipping quietly would let a user conclude there are no duplicate
+        # columns when michi never looked. A skipped check is itself a
+        # finding.
+        return [_skipped("duplicate columns", frame.shape[1], "columns")]
 
     signatures: dict[str, list[str]] = {}
     for name in frame.columns:
@@ -324,7 +327,11 @@ def _correlated_pairs(
         for column in columns
         if column.kind is ColumnKind.NUMERIC and column.unique > 1
     ]
-    if len(numeric) < 2 or len(numeric) > _MAX_PAIRWISE_COLUMNS:
+    if len(numeric) > _MAX_PAIRWISE_COLUMNS:
+        return [
+            _skipped("correlation between columns", len(numeric), "numeric columns")
+        ]
+    if len(numeric) < 2:
         return []
 
     try:
@@ -356,6 +363,25 @@ def _correlated_pairs(
                     )
                 )
     return findings
+
+
+def _skipped(analysis: str, size: int, unit: str) -> Finding:
+    """Report an analysis michi declined to run, and why.
+
+    Pairwise checks grow with the square of the column count, so michi caps
+    them to stay usable on very wide data. Saying so is not optional: silence
+    reads as "nothing found", which is a different claim entirely.
+    """
+    return Finding(
+        kind="analysis-skipped",
+        severity=Severity.INFO,
+        columns=(),
+        summary=(
+            f"{analysis} not checked — {size} {unit} exceeds the "
+            f"{_MAX_PAIRWISE_COLUMNS}-column limit for pairwise analysis"
+        ),
+        metrics={"analysis": analysis, "size": size},
+    )
 
 
 def _text_encoded_values(

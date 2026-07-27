@@ -28,6 +28,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     import numpy as np
 
 __all__ = [
+    "BOOTSTRAP_MAX_ROWS",
     "BOOTSTRAP_SAMPLES",
     "classification_metrics",
     "detect_task",
@@ -36,6 +37,17 @@ __all__ = [
 
 BOOTSTRAP_SAMPLES: Final = 1_000
 """Default resamples used to estimate confidence intervals."""
+
+BOOTSTRAP_MAX_ROWS: Final = 25_000
+"""Largest resample drawn when bootstrapping, however big the evaluation set.
+
+Resampling a million-row test set a thousand times costs minutes and buys
+nothing: the interval is already vanishingly narrow. Above this size michi
+draws smaller resamples and rescales the result — see
+:func:`_rescale_interval`.
+"""
+
+_MIN_ROWS_FOR_INTERVAL: Final = 20
 
 _MAX_CLASSES_FOR_CLASSIFICATION: Final = 50
 _CONTINUOUS_UNIQUE_RATIO: Final = 0.05
@@ -188,18 +200,7 @@ def regression_metrics(
         ("mape", _mape, False),
     ]
 
-    return tuple(
-        _bootstrapped(
-            name,
-            truth,
-            predictions,
-            scorer,
-            bootstrap,
-            seed,
-            greater_is_better=higher_better,
-        )
-        for name, scorer, higher_better in scorers
-    )
+    return tuple(_bootstrap_many(tuple(scorers), truth, predictions, bootstrap, seed))
 
 
 def _probability_metrics(
@@ -299,37 +300,103 @@ def _bootstrapped(
     from the training sample — that needs cross-validation, which arrives with
     ``michi bench``.
     """
+    return _bootstrap_many(
+        ((name, scorer, greater_is_better),), truth, predictions, resamples, seed
+    )[0]
+
+
+def _bootstrap_many(
+    scorers: tuple[tuple[str, Any, bool], ...],
+    truth: np.ndarray[Any, Any],
+    predictions: np.ndarray[Any, Any],
+    resamples: int,
+    seed: int,
+) -> list[Metric]:
+    """Bootstrap several metrics over one shared set of resamples.
+
+    Every metric is scored on the *same* resampled rows. Drawing a separate
+    set per metric would cost as many passes over the data as there are
+    metrics, for identical results — the seed made them identical anyway.
+
+    On a large evaluation set each resample is capped at
+    :data:`BOOTSTRAP_MAX_ROWS` rows and the resulting interval is rescaled to
+    the full sample size, because a smaller resample yields a systematically
+    wider interval — nearly three times too wide at 50,000 rows drawn from
+    400,000. Overstating uncertainty is no more honest than understating it.
+    """
     import numpy as np
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        try:
-            value = float(scorer(truth, predictions))
-        except (ValueError, IndexError):
-            return Metric(name, float("nan"), greater_is_better=greater_is_better)
 
-        if resamples <= 0 or truth.shape[0] < 20:
-            return Metric(name, value, greater_is_better=greater_is_better)
-
-        rng = np.random.default_rng(seed)
-        size = truth.shape[0]
-        samples: list[float] = []
-        for _ in range(resamples):
-            index = rng.integers(0, size, size)
+        values: list[float] = []
+        for _, scorer, _ in scorers:
             try:
-                samples.append(float(scorer(truth[index], predictions[index])))
+                values.append(float(scorer(truth, predictions)))
             except (ValueError, IndexError):
-                continue
+                values.append(float("nan"))
 
-    finite = [item for item in samples if item == item]
-    if len(finite) < resamples // 2:
-        return Metric(name, value, greater_is_better=greater_is_better)
+        size = truth.shape[0]
+        if resamples <= 0 or size < _MIN_ROWS_FOR_INTERVAL:
+            return [
+                Metric(name, value, greater_is_better=direction)
+                for (name, _, direction), value in zip(scorers, values, strict=True)
+            ]
 
-    low, high = np.percentile(finite, [2.5, 97.5])
-    return Metric(
-        name,
-        value,
-        ci_low=float(low),
-        ci_high=float(high),
-        greater_is_better=greater_is_better,
-    )
+        draw = min(size, BOOTSTRAP_MAX_ROWS)
+        rng = np.random.default_rng(seed)
+        samples: list[list[float]] = [[] for _ in scorers]
+        for _ in range(resamples):
+            index = rng.integers(0, size, draw)
+            resampled_truth = truth[index]
+            resampled_predictions = predictions[index]
+            for position, (_, scorer, _) in enumerate(scorers):
+                try:
+                    samples[position].append(
+                        float(scorer(resampled_truth, resampled_predictions))
+                    )
+                except (ValueError, IndexError):
+                    continue
+
+    results: list[Metric] = []
+    for position, (name, _, direction) in enumerate(scorers):
+        value = values[position]
+        finite = [item for item in samples[position] if item == item]
+        if value != value or len(finite) < resamples // 2:
+            results.append(Metric(name, value, greater_is_better=direction))
+            continue
+        low, high = _rescale_interval(
+            np.percentile(finite, [2.5, 97.5]), value, drawn=draw, total=size
+        )
+        results.append(
+            Metric(
+                name,
+                value,
+                ci_low=low,
+                ci_high=high,
+                greater_is_better=direction,
+            )
+        )
+    return results
+
+
+def _rescale_interval(
+    bounds: np.ndarray[Any, Any], value: float, *, drawn: int, total: int
+) -> tuple[float, float]:
+    """Scale an interval drawn from ``drawn`` rows up to ``total`` rows.
+
+    The width of a bootstrap interval shrinks with the square root of the
+    sample size, so an interval built from a smaller draw is too wide by
+    ``sqrt(total / drawn)``. This is the *m-out-of-n* bootstrap correction
+    (Bickel, Götze & van Zwet, 1997); without it, a 50,000-row draw from
+    400,000 rows reports an interval nearly three times wider than the truth.
+
+    Each side is scaled about the point estimate independently, so an
+    asymmetric interval stays asymmetric.
+    """
+    low, high = float(bounds[0]), float(bounds[1])
+    if drawn >= total or drawn <= 0:
+        return low, high
+
+    scale = (drawn / total) ** 0.5
+    return value - (value - low) * scale, value + (high - value) * scale

@@ -367,3 +367,18 @@ small-evaluation-set:
     - use cross-validation to reuse every row
     - report confidence intervals with every number
     - treat the results as directional rather than conclusive
+
+analysis-skipped:
+  title: A check michi did not run
+  what: >
+    Comparing every pair of columns costs time that grows with the square of
+    the column count, so michi caps those checks on very wide data. This
+    finding exists because silence would read as "nothing found", which is a
+    different claim from "not looked at".
+  options:
+    - run the check on a subset of columns you care about
+    - drop columns you already know are unwanted, then inspect again
+    - accept the gap, if wide-data duplicates and correlations are not a concern
+  caution: >
+    The absence of duplicate-column or correlation findings means nothing on a
+    dataset where this check was skipped.

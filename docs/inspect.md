@@ -35,10 +35,18 @@ compact summary.
 | `mixed-types` | More than one Python type in a column |
 | `class-imbalance` | A skewed target distribution (needs `--target`) |
 | `leakage-suspect` | A feature that predicts the target almost perfectly (needs `--target`) |
+| `analysis-skipped` | A pairwise check michi declined to run on very wide data |
 
 Findings state what is true. What to do about each one is your decision —
 `--explain` prints what a finding means and the options practitioners choose
 between, without recommending any of them.
+
+## Very wide data
+
+Comparing every pair of columns costs time that grows with the square of the
+column count, so michi caps duplicate-column and correlation checks above 200
+columns — and **says so**, as an `analysis-skipped` finding. Silence would
+read as "nothing found", which is a different claim from "not looked at".
 
 ## Naming a target
 

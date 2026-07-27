@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-07-27
+
+Fixes found by using the built package the way a stranger would.
+
 ### Added
 - **`michi.toml` now reaches every command**, not only the console. The
   documented precedence — flags > `michi.toml` > built-in — was previously
@@ -35,6 +39,21 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The install command is built from one constant, and a test fails if any
   message hardcodes the package name — which immediately caught a stale hint
   in the Excel loader.
+- **A skipped analysis is now a finding.** Above 200 columns michi caps its
+  pairwise checks; it used to skip them in silence, so a user could conclude
+  there were no duplicate columns when michi had never looked. Silence reads
+  as "nothing found", which is a different claim from "not looked at".
+- **`michi eval` was unusably slow on large data.** The default bootstrap on
+  400,000 rows would have taken about three and a half minutes. Resamples are
+  now shared across metrics instead of being redrawn identically for each,
+  and very large draws are capped and rescaled — an 8× speed-up.
+
+### Changed
+- The distribution is **`komichi`** on PyPI (小道, *a small path*), because
+  `michi` was taken. The command and the import remain `michi`.
+- Large-sample intervals use the *m-out-of-n* bootstrap correction. Capping
+  the draw without rescaling reported intervals nearly **three times too
+  wide**; overstating uncertainty is no more honest than understating it.
 
 ## [1.0.0] — 2026-07-27
 

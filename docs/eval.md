@@ -16,7 +16,13 @@ was measured, on which bytes, with which model, in which environment.
 
 **Metrics with confidence intervals.** Every headline metric comes with a 95%
 bootstrap interval, because the difference between 0.91 and 0.89 means nothing
-when the interval spans 0.06. Classification is headed by *balanced accuracy*
+when the interval spans 0.06.
+
+On a very large evaluation set michi draws smaller resamples and rescales the
+interval by the square root of the sampling ratio — the *m-out-of-n* bootstrap
+(Bickel, Götze & van Zwet, 1997). Without that correction, capping the draw
+reports an interval nearly three times too wide; overstating uncertainty is no
+more honest than understating it. `--bootstrap 0` skips intervals entirely. Classification is headed by *balanced accuracy*
 (which does not flatter a model that learned the majority class); regression by
 *RMSE* (in the units of your target, so a domain expert can judge it).
 
