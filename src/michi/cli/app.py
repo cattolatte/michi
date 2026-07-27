@@ -25,9 +25,11 @@ from michi import __version__
 from michi.cli.bench_cmd import bench_command
 from michi.cli.clean_cmd import apply_command, clean_command, export_command
 from michi.cli.eval_cmd import eval_command
+from michi.cli.fit_cmd import fit_command, predict_command
 from michi.cli.inspect_cmd import inspect_command
 from michi.cli.report_cmd import report_command
 from michi.cli.sweep_cmd import sweep_command
+from michi.cli.tune_cmd import tune_command
 from michi.cli.ui_cmd import ui_command
 
 app = typer.Typer(
@@ -47,6 +49,9 @@ app.command("report")(report_command)
 app.command("clean")(clean_command)
 app.command("apply")(apply_command)
 app.command("export")(export_command)
+app.command("tune")(tune_command)
+app.command("fit")(fit_command)
+app.command("predict")(predict_command)
 app.command("sweep")(sweep_command)
 app.command("ui")(ui_command)
 

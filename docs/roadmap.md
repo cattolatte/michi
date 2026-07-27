@@ -22,16 +22,23 @@ edges, in plugins, rather than in the core.
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
 | **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
+| **v1.4** | `tune` · `fit` · `predict` | Hyperparameter search with nested scoring; train and save a model; predict on unlabelled data. Closes the loop from raw CSV to submission file. **Shipped.** |
 | **v1.3** | target encoding + feature menu | `target-encode` with an out-of-fold encoder michi owns; an interactive column picker for feature engineering. **Shipped.** |
 
 ## Known gaps
 
 Stated plainly, because a roadmap that only lists wins is marketing.
 
-**Hyperparameter search is grid-only.** `sweep` enumerates models × recipes ×
-seeds. Bayesian or successive-halving search would be a real addition, and
-would need an ADR: it introduces an optimiser with an opinion, which is close
-to the line michi draws.
+**Bayesian hyperparameter search.** `tune` offers random, successive-halving,
+and grid search over a printable space. A model-based optimiser (Optuna,
+scikit-optimize) would be a real addition, and needs an ADR: it proposes
+configurations from its own beliefs, which is closer to the line michi draws
+than sampling from a space the user can read.
+
+**Deep learning training loops.** Any model with a `predict` works today
+through `eval` and `predict`, and a framework model can join the `bench`
+catalogue through the plugin system. What michi does not do is own a training
+loop — that is what turns a toolbox into a framework you must adopt.
 
 **Deliberately absent, not missing:** deep-learning training loops, model
 serving, monitoring, cloud anything. These are non-goals under PLAN §3 and

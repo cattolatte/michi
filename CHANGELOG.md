@@ -6,6 +6,42 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-07-27
+
+The last mile. Everything michi did stopped one step before the thing a
+practitioner actually hands in.
+
+### Added
+- **`michi tune`** — hyperparameter search over a space you can print before
+  anything runs (`--list-space`) and replace with your own YAML (`--space`).
+  Random, successive-halving, and grid strategies, all from scikit-learn.
+
+  The search is nested. Configurations are chosen by cross-validation *inside*
+  each training fold, and the reported score comes from folds the search never
+  touched. michi prints three numbers — the honest one, the same model
+  untuned on the same folds, and the search's own optimistic best — because
+  reporting an inner search score as performance is the second most common
+  silent leak in tabular ML, after target encoding.
+- **`michi fit`** — train one model on everything and save it. Reports no
+  accuracy on purpose: a score measured on the rows a model trained on is the
+  most confidently wrong number a tool can print.
+- **`michi predict`** — predict on data with **no label column**, writing CSV,
+  TSV, or parquet with an optional id column and class probabilities. This is
+  what a competition submission, a batch scoring job, and a smoke test all
+  need, and the one thing `eval` cannot do.
+
+  It accepts anything `eval` does, including `module:object` — so a PyTorch,
+  TensorFlow, or ONNX model works identically to a random forest, with no
+  per-framework loader for michi to maintain and get wrong.
+- `tune --save-params` writes YAML that `fit --params` reads, so the two verbs
+  hand off without the user joining them by hand.
+
+### Changed
+- The roadmap's "known gaps" now distinguishes Bayesian search (needs an ADR;
+  an optimiser proposes from its own beliefs) from deep learning (reachable
+  today through the predict protocol and the plugin catalogue; what michi will
+  not own is a training loop).
+
 ## [1.3.0] — 2026-07-27
 
 Target encoding, and a menu for picking the columns to engineer.
