@@ -11,6 +11,7 @@
 
 [![ci](https://github.com/cattolatte/michi/actions/workflows/ci.yml/badge.svg)](https://github.com/cattolatte/michi/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/cattolatte/michi?display_name=tag&sort=semver&color=b23a30)](https://github.com/cattolatte/michi/releases)
+[![pypi](https://img.shields.io/pypi/v/komichi?color=b23a30)](https://pypi.org/project/komichi/)
 [![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![mypy](https://img.shields.io/badge/mypy-strict-2a6db2)](https://mypy-lang.org/)
