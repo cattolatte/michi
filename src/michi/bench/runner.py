@@ -415,6 +415,19 @@ def _fold_pipeline(
         specs = transformer_specs(recipe, features)
         if specs:
             claimed = {name for _, _, columns in specs for name in columns}
+            if needs_scaling:
+                # A recipe's fitted step replaces michi's handling of the
+                # columns it names — including, until this was fixed, the
+                # standardisation a scale-sensitive model depends on. An
+                # imputed salary reached the estimator in the tens of
+                # thousands while every other feature sat near zero, which
+                # silently flattened distance- and gradient-based models.
+                # The recipe still decides *what* happens to the column;
+                # scaling is appended after it, not instead of it.
+                specs = [
+                    (name, _scaled(transformer), columns)
+                    for name, transformer, columns in specs
+                ]
             specs.extend(
                 column_specs(
                     features, policy, needs_scaling=needs_scaling, skip=claimed
@@ -424,6 +437,14 @@ def _fold_pipeline(
             return Pipeline([("prepare", preparation), ("model", estimator)])
 
     return build_pipeline(features, estimator, policy, needs_scaling=needs_scaling)
+
+
+def _scaled(transformer: Any) -> Any:
+    """Append standardisation to a recipe transformer, preserving its choice."""
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    return Pipeline([("recipe", transformer), ("scale", StandardScaler())])
 
 
 def _fold_interval(values: np.ndarray[Any, Any]) -> tuple[float | None, float | None]:

@@ -161,3 +161,129 @@ def test_empty_input_returns_no_comparisons() -> None:
     assert (
         compare_to_leader({}, greater_is_better=True, train_size=1, test_size=1) == ()
     )
+
+
+# --- scaling reaches every column, recipe or not ---------------------------
+
+
+def test_a_recipe_claimed_column_is_still_scaled() -> None:
+    """A recipe's fitted step must not smuggle raw magnitudes past the scaler.
+
+    `transformer_specs` replaces michi's handling of the columns a recipe
+    names. Until this was fixed that included the standardisation a
+    scale-sensitive model depends on, so an imputed salary arrived in the tens
+    of thousands while every other feature sat near zero — which silently
+    flattened distance- and gradient-based models. A neural network scored
+    exactly the dummy baseline; kNN and SVM were quietly degraded.
+    """
+    import numpy as np
+    import pandas as pd
+
+    from michi.bench.preprocess import PreparationPolicy
+    from michi.bench.registry import build_model
+    from michi.bench.runner import _fold_pipeline
+    from michi.recipes import Recipe, RecipeStep
+
+    rng = np.random.default_rng(0)
+    rows = 120
+    frame = pd.DataFrame(
+        {
+            "salary": rng.normal(loc=50_000, scale=9_000, size=rows),
+            "small": rng.normal(size=rows),
+        }
+    )
+    labels = (frame["small"] > 0).astype(int).to_numpy()
+    recipe = Recipe(
+        steps=(RecipeStep("impute", {"columns": ["salary"], "strategy": "median"}),)
+    )
+
+    pipeline = _fold_pipeline(
+        features=frame,
+        estimator=build_model("linear", "classification", 0),
+        policy=PreparationPolicy(),
+        recipe=recipe,
+        needs_scaling=True,
+    )
+    pipeline.fit(frame, labels)
+    prepared = np.asarray(pipeline.named_steps["prepare"].transform(frame), dtype=float)
+    assert np.nanmax(np.abs(prepared)) < 20, "a claimed column reached the model raw"
+
+
+def test_a_model_that_does_not_need_scaling_is_left_alone() -> None:
+    """Trees are scale-invariant; standardising for them is wasted work."""
+    import numpy as np
+    import pandas as pd
+
+    from michi.bench.preprocess import PreparationPolicy
+    from michi.bench.registry import build_model
+    from michi.bench.runner import _fold_pipeline
+    from michi.recipes import Recipe, RecipeStep
+
+    frame = pd.DataFrame({"salary": [50_000.0, 60_000.0, 70_000.0, 55_000.0]})
+    recipe = Recipe(
+        steps=(RecipeStep("impute", {"columns": ["salary"], "strategy": "median"}),)
+    )
+    pipeline = _fold_pipeline(
+        features=frame,
+        estimator=build_model("tree", "classification", 0),
+        policy=PreparationPolicy(),
+        recipe=recipe,
+        needs_scaling=False,
+    )
+    pipeline.fit(frame, np.array([0, 1, 1, 0]))
+    prepared = np.asarray(pipeline.named_steps["prepare"].transform(frame), dtype=float)
+    assert np.nanmax(np.abs(prepared)) > 1_000
+
+
+# --- neural networks are catalogue models like any other -------------------
+
+
+def test_the_catalogue_offers_a_neural_network() -> None:
+    """A training loop is a tool; `mlp` needs no extra install to reach it."""
+    from michi.bench import available_models
+
+    names = {entry.name for entry in available_models()}
+    assert "mlp" in names
+    assert "torch-mlp" in names
+
+
+def test_a_neural_network_beats_chance_on_learnable_data() -> None:
+    """A net that always scores the dummy baseline is worse than no net."""
+    import numpy as np
+    import pandas as pd
+    from sklearn.model_selection import cross_val_score
+
+    from michi.bench.preprocess import PreparationPolicy
+    from michi.bench.registry import build_model
+    from michi.bench.runner import _fold_pipeline
+
+    rng = np.random.default_rng(0)
+    rows = 300
+    signal = rng.normal(size=rows)
+    frame = pd.DataFrame({"signal": signal, "noise": rng.normal(size=rows)})
+    labels = (signal + rng.normal(scale=0.3, size=rows) > 0).astype(int)
+
+    pipeline = _fold_pipeline(
+        features=frame,
+        estimator=build_model("mlp", "classification", 0),
+        policy=PreparationPolicy(),
+        recipe=None,
+        needs_scaling=True,
+    )
+    scores = cross_val_score(pipeline, frame, labels, cv=3, scoring="balanced_accuracy")
+    assert scores.mean() > 0.7, f"mlp scored {scores.mean()}, barely above chance"
+
+
+def test_torch_mlp_without_torch_names_the_install() -> None:
+    """A missing optional dependency states the exact command to fix it."""
+    import pytest as _pytest
+
+    from michi.core.errors import RunError
+
+    try:
+        import torch  # noqa: F401
+    except ImportError:
+        from michi.bench.registry import build_model
+
+        with _pytest.raises(RunError, match=r"komichi\[torch\]"):
+            build_model("torch-mlp", "classification", 0)

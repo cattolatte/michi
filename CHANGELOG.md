@@ -6,6 +6,43 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-07-27
+
+Neural networks, and a scaling bug they exposed.
+
+### Added
+- **`mlp`** — a feed-forward neural network in the model catalogue, on
+  scikit-learn's training loop. No extra install: the first network someone
+  tries should not require a CUDA version and an afternoon.
+- **`torch-mlp`** (`pip install 'komichi[torch]'`) — a real PyTorch training
+  loop: epochs, Adam, mini-batches, a validation split, early stopping, and
+  restoring the best weights rather than the last. This is the code an
+  engineer retypes for the fortieth time, written once.
+
+  Both are ordinary catalogue entries, so `bench`, `tune`, `fit`, and
+  `predict` work on them with no special case anywhere in michi — a network
+  is cross-validated, significance-tested, and held against the dummy baseline
+  exactly like a random forest. michi never presents "we used deep learning"
+  as a result.
+- Search spaces for both, so `tune --model mlp` and `tune --model torch-mlp`
+  work like any other model. Layer sizes, dropout, and learning rate are
+  hyperparameters, not defaults michi picked for your data.
+
+### Fixed
+- **A recipe's fitted step smuggled raw magnitudes past the scaler.** When a
+  recipe named a column, `transformer_specs` replaced michi's handling of it —
+  including the standardisation scale-sensitive models depend on. An imputed
+  salary reached the estimator in the tens of thousands while every other
+  feature sat near zero.
+
+  Found because the new `mlp` scored *exactly* the dummy baseline on a dataset
+  where linear regression scored 0.89. It was never only about neural
+  networks: `linear`, `ridge`, `lasso`, `knn`, and `svm` were all quietly
+  degraded whenever a recipe had a fitted step. On the example dataset the
+  maximum feature magnitude fell from 56,542 to 7.0, and `mlp` went from
+  0.5000 to 0.8757. The recipe still decides *what* happens to a column;
+  scaling is appended after it rather than instead of it.
+
 ## [1.4.0] — 2026-07-27
 
 The last mile. Everything michi did stopped one step before the thing a

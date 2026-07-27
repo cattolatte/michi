@@ -91,6 +91,17 @@ _SPACES: dict[str, dict[str, list[Any]]] = {
         "model__num_leaves": [15, 31, 63],
         "model__subsample": [0.7, 1.0],
     },
+    "mlp": {
+        "model__hidden_layer_sizes": [(64,), (128, 64), (256, 128), (256, 128, 64)],
+        "model__alpha": [1e-5, 1e-4, 1e-3, 1e-2],
+        "model__learning_rate_init": [1e-4, 5e-4, 1e-3, 5e-3],
+    },
+    "torch-mlp": {
+        "model__hidden": [(128,), (256, 128), (512, 256, 128)],
+        "model__dropout": [0.0, 0.1, 0.3],
+        "model__learning_rate": [1e-4, 5e-4, 1e-3, 3e-3],
+        "model__batch_size": [64, 256, 1024],
+    },
     "catboost": {
         "model__iterations": [200, 500],
         "model__learning_rate": [0.03, 0.1],

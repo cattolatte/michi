@@ -201,6 +201,18 @@ def _catboost(task: str, seed: int) -> Any:
     )
 
 
+def _mlp(task: str, seed: int) -> Any:
+    from michi.bench.neural import build_mlp
+
+    return build_mlp(task, seed)
+
+
+def _torch_mlp(task: str, seed: int) -> Any:
+    from michi.bench.neural import build_torch_mlp
+
+    return build_torch_mlp(task, seed)
+
+
 def _missing_extra(package: str, extra: str) -> RunError:
     return RunError(
         f"{package} is not installed. Install it with: {install_hint(extra)}"
@@ -332,6 +344,27 @@ _REGISTRY: Final[tuple[ModelEntry, ...]] = (
         ),
         factory=_catboost,
         extra="bench",
+    ),
+    ModelEntry(
+        name="mlp",
+        tasks=_BOTH,
+        summary=(
+            "feed-forward neural network, two hidden layers; trains with "
+            "early stopping and needs no extra install"
+        ),
+        factory=_mlp,
+        needs_scaling=True,
+    ),
+    ModelEntry(
+        name="torch-mlp",
+        tasks=_BOTH,
+        summary=(
+            "PyTorch network; the epochs, Adam, batching, and early stopping "
+            "written once so you stop retyping them"
+        ),
+        factory=_torch_mlp,
+        needs_scaling=True,
+        extra="torch",
     ),
 )
 

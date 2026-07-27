@@ -81,6 +81,7 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, subgroup gaps | **v0.2** |
 | `michi bench … --models rf,linear,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | **v0.3** |
 | `michi tune … --model hist-gbm` | Hyperparameter search, scored on folds the search never saw | **v1.4** |
+| `michi bench … --models mlp,torch-mlp` | Neural networks with the training loop written for you — same CV, same baseline, same honesty | **v1.5** |
 | `michi fit` · `predict` | Train the model you chose, then predict on data with no labels — the submission file | **v1.4** |
 | `michi clean` · `apply` · `export` | Interactive cleaning **and feature engineering** that authors a reproducible recipe and exports readable pipeline code | **v0.4** · **v1.1** |
 | `michi` | Interactive console with context-aware completion; `path` maps the stages, `walk` asks its way through them | **v0.5** · **v1.1** |
