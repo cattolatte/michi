@@ -60,6 +60,18 @@
 </div>
 {% endif %}
 
+{% if charts.importance %}
+<h2>Column importance</h2>
+<figure class="card chart wide">
+  <figcaption>What the model loses without each column</figcaption>
+  {{ charts.importance|safe }}
+  <p class="muted small">Measured by shuffling a column and watching the score
+  fall. This is what the model <em>uses</em>, not what matters — a column it
+  ignores may still drive the outcome, and two correlated columns split the
+  credit between them. Faint bars are inside their own error bar.</p>
+</figure>
+{% endif %}
+
 {% if manifest.checks %}
 <h2>Checks</h2>
 <div class="card"><table><tbody>

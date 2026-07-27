@@ -92,6 +92,7 @@ def evaluate_model(
     features: tuple[str, ...] | None = None,
     slice_columns: tuple[str, ...] | None = None,
     bootstrap: int = BOOTSTRAP_SAMPLES,
+    importance: bool = False,
     seed: int = 0,
 ) -> RunManifest:
     """Evaluate a model and record the result as a run manifest.
@@ -184,6 +185,7 @@ def evaluate_model(
             task=resolved_task,
             slice_columns=slice_columns,
             bootstrap=bootstrap,
+            importance=importance,
             seed=seed,
             started=started,
         )
@@ -202,6 +204,7 @@ def _measure(
     task: str,
     slice_columns: tuple[str, ...] | None,
     bootstrap: int,
+    importance: bool,
     seed: int,
     started: float,
 ) -> RunManifest:
@@ -227,6 +230,11 @@ def _measure(
         "n_features": int(feature_frame.shape[1]),
         "features": [str(name) for name in feature_frame.columns],
     }
+
+    if importance:
+        ranked = _importance(model, feature_frame, truth, resolved_task, seed)
+        if ranked:
+            details["importance"] = [item.to_dict() for item in ranked]
 
     if resolved_task == "classification":
         classes, matrix = _confusion(truth, predictions)
@@ -486,3 +494,34 @@ def summarise_checks(checks: tuple[Finding, ...]) -> str:
     worst = min(checks, key=lambda check: check.severity.rank)
     prefix = "" if worst.severity is Severity.INFO else f"{worst.severity.value}: "
     return f"{prefix}{worst.summary}"
+
+
+def _importance(
+    model: LoadedModel,
+    frame: pd.DataFrame,
+    truth: np.ndarray[Any, Any],
+    task: str,
+    seed: int,
+) -> tuple[Any, ...]:
+    """Rank columns by what the model loses without them.
+
+    Scored on the headline metric for the task, so the ranking is in the same
+    currency as everything else on the page.
+    """
+    from sklearn import metrics as skm
+
+    from michi.evaluation.importance import permutation_importance
+
+    def scorer(actual: Any, predicted: Any) -> float:
+        if task == "classification":
+            return float(skm.balanced_accuracy_score(actual, predicted))
+        # Higher is better for a permutation drop to mean "lost information",
+        # so a regression error is negated rather than reported as-is.
+        return -float(skm.root_mean_squared_error(actual, predicted))
+
+    try:
+        return permutation_importance(model, frame, truth, scorer=scorer, seed=seed)
+    except Exception:  # third-party failure boundary
+        # Importance is a bonus. A model that cannot survive a shuffled column
+        # still has every metric on the page.
+        return ()

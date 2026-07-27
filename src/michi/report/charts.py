@@ -26,6 +26,7 @@ from typing import Any
 __all__ = [
     "calibration_chart",
     "confusion_chart",
+    "importance_chart",
     "interval_chart",
     "slice_chart",
 ]
@@ -320,6 +321,64 @@ def slice_chart(
             f'<text x="{width - 4}" y="{y + 4}" text-anchor="end" font-size="10" '
             f'fill="{MUTED}" fill-opacity="{_MUTED_OPACITY}">'
             f"{value:.3g}{escape(suffix)}</text>"
+        )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def importance_chart(
+    ranked: list[dict[str, Any]], *, width: int = 420, limit: int = 12
+) -> str | None:
+    """Columns ranked by what the model loses without them.
+
+    Bars inside their own error bar are drawn faintly rather than omitted: a
+    column measured as unimportant is a result, and hiding it would make the
+    chart look more decisive than the run was.
+    """
+    entries: list[tuple[str, float, float]] = []
+    for entry in ranked[:limit]:
+        drop = entry.get("drop")
+        if drop is None:
+            continue
+        entries.append(
+            (
+                str(entry.get("column", "?")),
+                float(drop),
+                float(entry.get("spread", 0.0)),
+            )
+        )
+    if not entries:
+        return None
+
+    label_space = 150
+    row_height = 22
+    height = row_height * len(entries) + 22
+    plot_w = width - label_space - 76
+    largest = max(abs(value) for _, value, _ in entries) or 1.0
+
+    parts = [
+        f'<svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
+        f'role="img" aria-label="column importance">'
+    ]
+    for index, (label, drop, spread) in enumerate(entries):
+        y = 14 + index * row_height
+        bar = max(abs(drop) / largest * plot_w, 1.0)
+        noise = abs(drop) <= spread
+        parts.append(
+            f'<text x="{label_space - 8}" y="{y + 4}" text-anchor="end" '
+            f'font-size="10" fill="{MUTED}" fill-opacity="{_MUTED_OPACITY}">'
+            f"{escape(label)[:24]}</text>"
+        )
+        parts.append(
+            f'<rect x="{label_space}" y="{y - 6}" width="{bar:.1f}" height="12" '
+            f'fill="{ACCENT if not noise else MUTED}" '
+            f'fill-opacity="{0.75 if not noise else 0.25}" rx="2"/>'
+        )
+        suffix = "  within noise" if noise else ""
+        parts.append(
+            f'<text x="{width - 4}" y="{y + 4}" text-anchor="end" font-size="10" '
+            f'fill="{MUTED}" fill-opacity="{_MUTED_OPACITY}">'
+            f"{drop:+.3g}{escape(suffix)}</text>"
         )
     parts.append("</svg>")
     return "".join(parts)

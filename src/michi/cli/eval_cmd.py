@@ -118,6 +118,13 @@ def eval_command(
     full: Annotated[
         bool, typer.Option("--full", help="Read every row, however large the file.")
     ] = False,
+    importance: Annotated[
+        bool,
+        typer.Option(
+            "--importance",
+            help="Rank columns by what the model loses without them.",
+        ),
+    ] = False,
     seed: Annotated[
         int | None, typer.Option("--seed", help="Seed for sampling and resampling.")
     ] = None,
@@ -167,6 +174,7 @@ def eval_command(
             features=_split(features),
             slice_columns=_split(slice_by),
             bootstrap=bootstrap,
+            importance=importance,
             seed=seed,
         )
     except MichiError as err:

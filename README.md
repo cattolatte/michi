@@ -80,6 +80,7 @@ Every verb stands alone. Use one, ignore the rest.
 | `michi inspect data.csv` | Profile a dataset: types, missing values, duplicates, skew, imbalance, correlations, outliers, leakage suspects — every finding explained | **v0.1** |
 | `michi eval model.pkl data.csv --target y` | Rigorously evaluate an existing model: metrics with intervals, calibration, baselines, subgroup gaps | **v0.2** |
 | `michi bench … --models rf,linear,xgb` | Train and compare models with honest CV, confidence intervals, significance tests | **v0.3** |
+| `michi split data.csv --group customer` | Train/test splits that respect entities and time — where leakage actually hides | **v1.9** |
 | `michi tune … --model hist-gbm` | Hyperparameter search, scored on folds the search never saw | **v1.4** |
 | `michi ensemble … --models linear,rf,xgb` | Stack or vote several models — and see whether it actually beat the best one | **v1.6** |
 | `michi bench … --models mlp,torch-mlp` | Neural networks with the training loop written for you — same CV, same baseline, same honesty | **v1.5** |

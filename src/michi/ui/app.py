@@ -116,6 +116,7 @@ def _charts(manifest: Any) -> dict[str, str | None]:
     from michi.report.charts import (
         calibration_chart,
         confusion_chart,
+        importance_chart,
         interval_chart,
         slice_chart,
     )
@@ -132,4 +133,5 @@ def _charts(manifest: Any) -> dict[str, str | None]:
         ),
         "calibration": calibration_chart(details.get("calibration")),
         "slices": slice_chart(list(details.get("slices") or [])),
+        "importance": importance_chart(list(details.get("importance") or [])),
     }

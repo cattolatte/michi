@@ -359,6 +359,10 @@ def render_evaluation(
     console.print(Padding(_eval_summary(manifest), (0, 0, 1, 2)))
     console.print(Padding(_metrics_table(manifest), (0, 0, 1, 2)))
 
+    ranked = _importance_table(manifest)
+    if ranked is not None:
+        console.print(Padding(ranked, (0, 0, 1, 2)))
+
     confusion = _confusion_table(manifest)
     if confusion is not None:
         console.print(Padding(confusion, (0, 0, 1, 2)))
@@ -455,6 +459,41 @@ def _baseline_value(manifest: RunManifest, baseline: str, metric_name: str) -> s
         if metric.name == metric_name:
             return _number(metric.value)
     return "—"
+
+
+def _importance_table(manifest: RunManifest) -> RenderableType | None:
+    """Rank columns by what the model loses without them."""
+    ranked = manifest.details.get("importance")
+    if not ranked:
+        return None
+
+    table = Table(box=box.SIMPLE_HEAD, pad_edge=False, show_edge=False)
+    table.add_column("column", style="cyan", no_wrap=True)
+    table.add_column("drop when shuffled", justify="right")
+    table.add_column("±", justify="right", style="dim")
+    table.add_column("", style="dim")
+
+    for entry in ranked[:15]:
+        drop = float(entry["drop"])
+        spread = float(entry["spread"])
+        # An importance inside its own error bar is a column this run could
+        # not distinguish from one the model ignores — saying so is the whole
+        # value of having measured the spread.
+        note = "within noise" if abs(drop) <= spread else ""
+        table.add_row(
+            str(entry["column"]),
+            f"{drop:+.4g}",
+            f"{spread:.3g}",
+            note,
+        )
+
+    caption = Text(style="dim")
+    caption.append(
+        "What this model uses, not what matters: a column it ignores may still "
+        "drive the\noutcome, and two correlated columns split the credit "
+        "between them."
+    )
+    return Group(Text("Column importance", style="bold"), Text(), table, caption)
 
 
 def _confusion_table(manifest: RunManifest) -> RenderableType | None:

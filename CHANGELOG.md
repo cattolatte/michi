@@ -6,6 +6,41 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-07-27
+
+### Added
+- **`michi split`** — hold data out the way the data requires. A classification
+  target is stratified without being asked; `--group` keeps rows sharing an
+  entity on one side; `--time` holds out the future.
+
+  The last two exist because a random split *lies*. Two rows from the same
+  customer put four in training and one in test, and the score that comes back
+  is memory rather than generalisation. A test set drawn from before the
+  training rows asks the model to predict the past. Both need a column michi
+  cannot guess, so both are flags — and a random split now says plainly what
+  it cannot promise.
+
+  The summary states the property the split was chosen to provide and verifies
+  it: a grouped split confirms no group spans both sides, and says so loudly
+  if one does rather than promising silently.
+- **`eval --importance`** — rank columns by what the model loses when each is
+  shuffled. Measured through `predict` alone, so a PyTorch network and a
+  random forest are measured identically and michi needs no per-model
+  introspection to keep working.
+
+  Each column is shuffled several times and the spread reported, because an
+  importance smaller than its own noise is not a finding — those rows are
+  marked "within noise" and drawn faintly in the viewer. The output states
+  what it is: *what this model uses*, not what matters. A column the model
+  ignores may still drive the outcome, and two correlated columns split the
+  credit between them, which has misled people into deleting a feature that
+  mattered.
+- A column-importance chart in `michi ui`, and `分 split` in the CLI stage map.
+
+### Fixed
+- `eval --importance` was declared and never passed through to the evaluator,
+  so the flag silently did nothing. Caught by running it.
+
 ## [1.8.0] — 2026-07-27
 
 ### Added
