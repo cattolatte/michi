@@ -136,6 +136,13 @@ michi fit data.csv --target churned --model hist-gbm --recipe michi.recipe.yaml 
 
 Trains one model on **every row you give it** and writes a joblib file.
 
+`--calibrate isotonic|sigmoid` wraps a classifier so its probabilities mean
+what they say. `eval` has reported overconfidence since v0.2 and offered no
+way to fix it; calibration is fitted by internal cross-validation, so the
+mapping from score to probability is learned on folds the base model did not
+train on. `isotonic` is flexible and wants more data; `sigmoid` assumes a
+shape and survives small samples.
+
 **It reports no accuracy, on purpose.** A score measured on the rows a model
 trained on is the most confidently wrong number a tool can print. `michi
 bench` compares models honestly; `michi eval` scores one against held-out

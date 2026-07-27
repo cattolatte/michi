@@ -103,6 +103,26 @@ def clean_command(
             help="Comma-separated categorical columns to encode by target mean.",
         ),
     ] = None,
+    text_length: Annotated[
+        str | None,
+        typer.Option("--text-length", help="Comma-separated text columns to measure."),
+    ] = None,
+    tfidf: Annotated[
+        str | None,
+        typer.Option("--tfidf", help="Comma-separated text columns to vectorise."),
+    ] = None,
+    lag: Annotated[
+        list[str] | None,
+        typer.Option("--lag", help="COLUMN=PERIODS — needs --order-by."),
+    ] = None,
+    rolling: Annotated[
+        list[str] | None,
+        typer.Option("--rolling", help="COLUMN=WINDOW[:stat] — needs --order-by."),
+    ] = None,
+    order_by: Annotated[
+        str | None,
+        typer.Option("--order-by", help="Column defining row order for lag/rolling."),
+    ] = None,
     no_input: Annotated[
         bool,
         typer.Option("--no-input", help="Never prompt; use only the flags given."),
@@ -163,6 +183,10 @@ def clean_command(
                 binarize,
                 bin_,
                 target_encode,
+                text_length,
+                tfidf,
+                lag,
+                rolling,
             ]
         )
         if flags_given or no_input:
@@ -181,6 +205,11 @@ def clean_command(
                 binarize=_pairs(binarize, "binarize"),
                 bin_=_pairs(bin_, "bin"),
                 target_encode=_split(target_encode),
+                text_length=_split(text_length),
+                tfidf=_split(tfidf),
+                lag=_pairs(lag, "lag"),
+                rolling=_pairs(rolling, "rolling"),
+                order_by=order_by,
                 target=target,
             )
         else:

@@ -43,14 +43,14 @@ def apply_deterministic(recipe: Recipe, frame: pd.DataFrame) -> pd.DataFrame:
 
 def transformer_specs(
     recipe: Recipe, frame: pd.DataFrame
-) -> list[tuple[str, Any, list[str]]]:
+) -> list[tuple[str, Any, Any]]:
     """Return one ``(name, transformer, columns)`` triple per fitted step.
 
     Callers compose these themselves, because a recipe speaks only about the
     columns it names — and something still has to prepare the rest.
     """
     present = {str(name) for name in frame.columns}
-    specs: list[tuple[str, Any, list[str]]] = []
+    specs: list[tuple[str, Any, Any]] = []
 
     for index, step in enumerate(recipe.fitted_steps):
         columns = [name for name in step.columns if name in present]
@@ -58,6 +58,13 @@ def transformer_specs(
             continue
         transformer = _transformer_for(step)
         if transformer is None:
+            continue
+        if step.op == "tfidf":
+            # A vectorizer consumes a Series, and a ColumnTransformer only
+            # passes one when the selector is a bare name rather than a list.
+            # One spec per column, therefore, rather than one per step.
+            for position, name in enumerate(columns):
+                specs.append((f"{step.op}_{index}_{position}", transformer, name))
             continue
         specs.append((f"{step.op}_{index}", transformer, columns))
     return specs
@@ -141,6 +148,17 @@ def _transformer_for(step: RecipeStep) -> Any | None:
             encode="ordinal",
             strategy=str(step.params.get("strategy", "quantile")),
             subsample=None,
+        )
+
+    if step.op == "tfidf":
+        from sklearn.feature_extraction.text import TfidfVectorizer
+
+        # A vectorizer takes one text column, not a frame, so the caller
+        # gives it exactly one — a ColumnTransformer passes a Series when the
+        # selector is a bare string, which is why specs name it that way.
+        return TfidfVectorizer(
+            max_features=int(step.params.get("max_features", 50)),
+            ngram_range=(1, max(int(step.params.get("ngram", 1)), 1)),
         )
 
     if step.op == "target-encode":

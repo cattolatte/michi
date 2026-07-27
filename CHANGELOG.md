@@ -6,6 +6,44 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.0] — 2026-07-27
+
+Text, time, and three things a practitioner had to leave michi to do.
+
+### Added
+- **Text recipe operations.** `text-length` counts characters and words —
+  often most of the signal a free-text field carries, since "how much did
+  they write" predicts more than any single word. `tfidf` learns a vocabulary
+  and is therefore *fitted*, so it lands inside the cross-validation fold
+  where the test rows cannot vote on which words exist.
+
+  Until now a text column could only be dropped or one-hot encoded, which for
+  free text is useless.
+- **Time-series recipe operations.** `lag` gives the value a column held N
+  rows earlier; `rolling` gives a statistic over the N rows up to and
+  including this one. Both take `--order-by`, because "earlier" needs a
+  definition and michi will not guess a sort column, and both accept a `group`
+  so one entity's history never leaks into another's.
+
+  Both are classified deterministic despite depending on other rows: they read
+  only *earlier* ones in a stated order, so no future value can reach a past
+  row. That is the property that makes them safe outside the fold.
+- **`bench --oof`** — write out-of-fold predictions, one column per model.
+  Every value was predicted by a fold that did not train on that row, which is
+  what makes them safe to stack on and what distinguishes them from
+  predictions of the training data.
+- **`bench --balance`** — weight classes inversely to their frequency where
+  the model accepts it. A model that does not take `class_weight` is not an
+  error; the request simply does not apply, and saying so would be noise.
+- **`fit --calibrate isotonic|sigmoid`** — `eval` has reported overconfident
+  probabilities since v0.2 and offered no way to fix them. Calibration is
+  fitted by internal cross-validation, so the mapping from score to
+  probability is learned on folds the base model did not train on.
+
+### Fixed
+- `bench --oof` was declared and never threaded into `run_benchmark`, so it
+  wrote nothing. Caught by running it — the same way as the last four.
+
 ## [1.10.0] — 2026-07-27
 
 Three questions michi could not answer, all of which someone was answering by

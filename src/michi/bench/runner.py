@@ -21,6 +21,7 @@ from __future__ import annotations
 import time
 import warnings
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from michi.bench.preprocess import PreparationPolicy, build_pipeline, describe_policy
@@ -51,6 +52,13 @@ class ModelResult:
     fold_scores: tuple[float, ...]
     fit_seconds: float
     failed: str | None = None
+    oof: tuple[float, ...] = field(default_factory=tuple)
+    """Out-of-fold predictions, in the input's row order, when collected.
+
+    Every row is predicted by a fold that did not train on it, which is what
+    makes these safe to stack on — and what makes them different from
+    predictions of the training data.
+    """
 
     @property
     def primary(self) -> Metric:
@@ -102,6 +110,8 @@ def run_benchmark(
     policy: PreparationPolicy | None = None,
     recipe: Recipe | None = None,
     seed: int = 0,
+    balance: bool = False,
+    oof: Path | None = None,
     group_id: str | None = None,
 ) -> BenchResult:
     """Train and compare models under cross-validation.
@@ -127,6 +137,12 @@ def run_benchmark(
         michi's assumptions.
     seed
         Seed for fold assignment and every model that accepts one.
+    balance
+        Weight classes inversely to their frequency, for models that accept
+        it. A mechanic, not a judgement: it changes what the loss counts, not
+        what michi thinks the right answer is.
+    oof
+        Where to write out-of-fold predictions, or ``None`` to skip them.
     group_id
         Identifier shared by all manifests from this benchmark.
 
@@ -204,6 +220,8 @@ def run_benchmark(
                 policy=resolved_policy,
                 recipe=recipe,
                 seed=seed,
+                balance=balance,
+                collect_oof=oof is not None,
             )
         )
 
@@ -334,6 +352,8 @@ def _run_one_model(
     policy: PreparationPolicy,
     recipe: Recipe | None,
     seed: int,
+    balance: bool = False,
+    collect_oof: bool = False,
 ) -> ModelResult:
     """Cross-validate one model, capturing failure rather than aborting."""
     import numpy as np
@@ -341,6 +361,7 @@ def _run_one_model(
     entry = model_entry(name)
     started = time.perf_counter()
     per_metric: dict[str, list[float]] = {metric: [] for metric, _, _ in scorers}
+    out_of_fold = np.full(len(features), np.nan, dtype=float)
 
     try:
         with warnings.catch_warnings():
@@ -348,13 +369,17 @@ def _run_one_model(
             for train_index, test_index in splitter.split(features, labels):
                 pipeline = _fold_pipeline(
                     features=features,
-                    estimator=build_model(name, task, seed),
+                    estimator=_estimator(name, task, seed, balance=balance),
                     policy=policy,
                     recipe=recipe,
                     needs_scaling=entry.needs_scaling,
                 )
                 pipeline.fit(features.iloc[train_index], labels[train_index])
                 predictions = pipeline.predict(features.iloc[test_index])
+                if collect_oof:
+                    # Row order is preserved by writing into the test index,
+                    # so the column joins back onto the original frame.
+                    out_of_fold[test_index] = predictions
                 for metric_name, scorer, _ in scorers:
                     per_metric[metric_name].append(
                         float(scorer(labels[test_index], predictions))
@@ -387,7 +412,23 @@ def _run_one_model(
         metrics=tuple(metrics),
         fold_scores=tuple(per_metric[scorers[0][0]]),
         fit_seconds=time.perf_counter() - started,
+        oof=tuple(out_of_fold) if collect_oof else (),
     )
+
+
+def _estimator(name: str, task: str, seed: int, *, balance: bool) -> Any:
+    """Build a model, weighting classes by inverse frequency when asked.
+
+    Not every estimator accepts `class_weight`, and one that does not is not
+    an error — the request simply does not apply to it, and saying so would
+    be noise on a leaderboard where other models did honour it.
+    """
+    estimator = build_model(name, task, seed)
+    if not balance or task != "classification":
+        return estimator
+    if "class_weight" in getattr(estimator, "get_params", dict)():
+        estimator.set_params(class_weight="balanced")
+    return estimator
 
 
 def _fold_pipeline(

@@ -62,6 +62,13 @@ def fit_command(
         str | None,
         typer.Option("--task", help="Force `classification` or `regression`."),
     ] = None,
+    calibrate: Annotated[
+        str | None,
+        typer.Option(
+            "--calibrate",
+            help="Fix overconfident probabilities: 'isotonic' or 'sigmoid'.",
+        ),
+    ] = None,
     seed: Annotated[int | None, typer.Option("--seed", help="Random seed.")] = None,
     sample: Annotated[
         int, typer.Option("--sample", help="Rows to keep when a large file is sampled.")
@@ -102,6 +109,7 @@ def fit_command(
             task=task,
             recipe=recipe,
             params=params,
+            calibrate=calibrate,
             seed=resolved_seed,
         )
     except MichiError as err:
@@ -281,6 +289,7 @@ def _build_fitted(
     task: str | None,
     recipe: Path | None,
     params: Path | None,
+    calibrate: str | None,
     seed: int,
 ) -> tuple[Any, str, int]:
     """Apply the recipe, build the pipeline, and fit it on everything."""
@@ -322,8 +331,34 @@ def _build_fitted(
         recipe=loaded_recipe,
         needs_scaling=model_entry(model).needs_scaling,
     )
+    if calibrate:
+        pipeline = _calibrated(pipeline, calibrate, resolved_task)
+
     pipeline.fit(features, labels.to_numpy())
     return pipeline, resolved_task, len(features)
+
+
+def _calibrated(pipeline: Any, method: str, task: str) -> Any:
+    """Wrap a classifier so its probabilities mean what they say.
+
+    `eval` reports that a model is overconfident — it says 0.9 and is right
+    0.7 of the time — and until now offered no way to fix it. Calibration is
+    fitted by internal cross-validation, so the mapping from score to
+    probability is learned on folds the base model did not train on.
+    """
+    from sklearn.calibration import CalibratedClassifierCV
+
+    if task != "classification":
+        msg = "--calibrate applies to classifiers; a regressor has no probabilities"
+        raise MichiError(msg)
+    if method not in {"isotonic", "sigmoid"}:
+        msg = (
+            f"--calibrate expects isotonic or sigmoid (got {method!r}). "
+            "isotonic is flexible and needs more data; sigmoid assumes a "
+            "shape and survives small samples."
+        )
+        raise MichiError(msg)
+    return CalibratedClassifierCV(pipeline, method=method, cv=5)
 
 
 def _load_params(path: Path) -> dict[str, Any]:

@@ -51,6 +51,15 @@ _KNOWN_OPS: dict[str, frozenset[str]] = {
     # only a frame to work with, and an encoder told its target out-of-band
     # would not be reproducible from the file alone.
     "target-encode": frozenset({"columns", "target", "smoothing"}),
+    # Text. `text-length` reads one cell; `tfidf` learns a vocabulary, so it
+    # is fitted and belongs inside the fold like any other learner.
+    "text-length": frozenset({"columns"}),
+    "tfidf": frozenset({"columns", "max_features", "ngram"}),
+    # Time series. Both look only at earlier rows in a stated order, so
+    # neither learns from a label — but both need `by` to know what earlier
+    # means, and michi will not guess a sort column.
+    "lag": frozenset({"columns", "by", "periods", "group"}),
+    "rolling": frozenset({"columns", "by", "window", "stat", "group"}),
 }
 
 
@@ -63,7 +72,8 @@ class RecipeStep:
     op
         Operation name. Cleaning: ``drop``, ``dedupe``, ``cast``, ``impute``,
         ``clip``, ``encode``, ``scale``. Feature engineering: ``datepart``,
-        ``log``, ``interact``, ``binarize``, ``bin``, ``target-encode``.
+        ``log``, ``interact``, ``binarize``, ``bin``, ``target-encode``,
+        ``text-length``, ``tfidf``, ``lag``, ``rolling``.
     params
         Operation-specific parameters.
     why
@@ -125,7 +135,7 @@ class RecipeStep:
         >>> RecipeStep("bin", {"columns": ["age"]}).is_fitted
         True
         """
-        return self.op in {"impute", "encode", "scale", "bin", "target-encode"}
+        return self.op in {"impute", "encode", "scale", "bin", "target-encode", "tfidf"}
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a JSON/YAML-compatible dictionary."""

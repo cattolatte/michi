@@ -108,13 +108,38 @@ they inherit `apply`, `export`, and the fitted/deterministic split.
 | `binarize` | `--binarize col=0` | Reduce to above the threshold, or not |
 | `bin` | `--bin col=5:quantile` | Discretise into N bins — `quantile` or `uniform` |
 | `target-encode` | `--target-encode a,b` | Replace a category with the target's mean for that category, computed out of fold |
+| `text-length` | `--text-length note` | Character and word counts |
+| `tfidf` | `--tfidf note` | Term frequencies, vocabulary learned from the data |
+| `lag` | `--lag sales=1 --order-by when` | The value N rows earlier |
+| `rolling` | `--rolling sales=7:mean --order-by when` | A statistic over the N rows up to this one |
 
 A raw datetime is close to useless to a model: it is one enormous integer, and
 the signal is almost always in its parts. A linear model cannot represent
 "high income *and* young" unless you hand it the product; a tree can, but only
 by spending depth on it.
 
-**`bin` and `target-encode` are fitted; the other four are not.** Quantile
+### Text and time
+
+A free-text column could previously only be dropped or one-hot encoded, which
+for free text is useless. `text-length` counts characters and words — often
+most of the signal, since *how much someone wrote* predicts more than any
+single word. `tfidf` learns a vocabulary, so it is **fitted** and runs inside
+the fold where the test rows cannot vote on which words exist.
+
+`lag` and `rolling` need `--order-by`, because "earlier" needs a definition
+and michi will not guess a sort column. Both accept a `group` so one entity's
+history never leaks into another's:
+
+```bash
+michi clean sales.csv --target churned \
+  --order-by date --lag revenue=1 --rolling revenue=7:mean
+```
+
+Both are **deterministic** despite depending on other rows: they read only
+*earlier* ones in a stated order, so no future value can reach a past row.
+That is exactly the property that makes them safe outside the fold.
+
+**`bin`, `target-encode`, and `tfidf` are fitted; the rest are not.** Quantile
 edges are *learned* from the rows in front of them, and a target encoding
 learns from the labels themselves. `export` puts both inside
 `build_pipeline()`, and leaves the deterministic four in `prepare()`.

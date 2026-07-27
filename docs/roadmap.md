@@ -22,14 +22,15 @@ edges, in plugins, rather than in the core.
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
 | **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
-| **v1.10** | `diff` · `threshold` · `errors` | Drift against a baseline; the decision cutoff; the rows behind the score. **Shipped.** |
-| **v1.9** | `split` + importance | Grouped and time-based splits; permutation importance through the predict protocol. **Shipped.** |
-| **v1.8** | bayesian search | `tune --strategy bayes` under ADR-0004. **Shipped.** |
-| **v1.7** | charts in `ui` | Confusion matrix, calibration curve, metric intervals, and subgroup scores, drawn from the manifests michi already wrote. **Shipped.** |
-| **v1.6** | `ensemble` | Stacking and soft voting, ranked against the members they combine. **Shipped.** |
-| **v1.5** | neural networks | `mlp` on scikit-learn and `torch-mlp` on PyTorch, as catalogue models every verb already understands. **Shipped.** |
-| **v1.4** | `tune` · `fit` · `predict` | Hyperparameter search with nested scoring; train and save a model; predict on unlabelled data. Closes the loop from raw CSV to submission file. **Shipped.** |
 | **v1.3** | target encoding + feature menu | `target-encode` with an out-of-fold encoder michi owns; an interactive column picker for feature engineering. **Shipped.** |
+| **v1.4** | `tune` · `fit` · `predict` | Hyperparameter search with nested scoring; train and save a model; predict on unlabelled data. Closes the loop from raw CSV to submission file. **Shipped.** |
+| **v1.5** | neural networks | `mlp` on scikit-learn and `torch-mlp` on PyTorch, as catalogue models every verb already understands. **Shipped.** |
+| **v1.6** | `ensemble` | Stacking and soft voting, ranked against the members they combine. **Shipped.** |
+| **v1.7** | charts in `ui` | Confusion matrix, calibration curve, metric intervals, and subgroup scores, drawn from the manifests michi already wrote. **Shipped.** |
+| **v1.8** | bayesian search | `tune --strategy bayes` under ADR-0004. **Shipped.** |
+| **v1.9** | `split` + importance | Grouped and time-based splits; permutation importance through the predict protocol. **Shipped.** |
+| **v1.10** | `diff` · `threshold` · `errors` | Drift against a baseline; the decision cutoff; the rows behind the score. **Shipped.** |
+| **v1.11** | text · time · oof · calibration | TF-IDF and lengths, lag and rolling windows, out-of-fold predictions, class weights, probability calibration. **Shipped.** |
 
 ## Known gaps
 
@@ -41,9 +42,10 @@ catalogue and probably should not be: they need data michi does not model
 (images, tokens) and a per-architecture zoo would be a framework by another
 name. Bring your own through `module:object`, or register one as a plugin.
 
-**Deliberately absent, not missing:** deep-learning training loops, model
-serving, monitoring, cloud anything. These are non-goals under PLAN §3 and
-§11, not work that has not happened yet.
+**Deliberately absent, not missing:** model serving, monitoring, experiment
+tracking servers, cloud anything. These are non-goals rather than work that
+has not happened — and they are what makes the rest credible: michi is safe to
+point at a client's data precisely because it has nowhere to send it.
 
 ## Artifacts
 

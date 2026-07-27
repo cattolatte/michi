@@ -179,6 +179,8 @@ offline page.
 | `--open` | off | Open the report in a browser |
 | `--recipe` | none | Cleaning recipe to apply |
 | `--seed` | 0 | Seed for folds and models |
+| `--oof` | none | Write out-of-fold predictions, one column per model |
+| `--balance` | off | Weight classes inversely to their frequency, where supported |
 | `--explain` | off | Explain this run's own numbers, and what each check means |
 
 ## A note on the intervals

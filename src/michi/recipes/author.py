@@ -136,6 +136,11 @@ def recipe_from_flags(
     binarize: Sequence[tuple[str, str]] = (),
     bin_: Sequence[tuple[str, str]] = (),
     target_encode: Sequence[str] = (),
+    text_length: Sequence[str] = (),
+    tfidf: Sequence[str] = (),
+    lag: Sequence[tuple[str, str]] = (),
+    rolling: Sequence[tuple[str, str]] = (),
+    order_by: str | None = None,
     target: str | None = None,
 ) -> Recipe:
     """Assemble a recipe entirely from command-line flags.
@@ -221,6 +226,44 @@ def recipe_from_flags(
                 why="requested with --target-encode",
             )
         )
+    if text_length:
+        steps.append(
+            RecipeStep(
+                "text-length",
+                {"columns": list(text_length)},
+                why="requested with --text-length",
+            )
+        )
+    for column in tfidf:
+        steps.append(RecipeStep("tfidf", {"columns": [column], "max_features": 50}))
+    for column, periods in lag:
+        if not order_by:
+            msg = "--lag needs --order-by: the column that defines row order"
+            raise RecipeError(msg)
+        steps.append(
+            RecipeStep(
+                "lag",
+                {"columns": [column], "by": order_by, "periods": int(periods)},
+                why="requested with --lag",
+            )
+        )
+    for column, spec in rolling:
+        if not order_by:
+            msg = "--rolling needs --order-by: the column that defines row order"
+            raise RecipeError(msg)
+        window, _, stat = spec.partition(":")
+        steps.append(
+            RecipeStep(
+                "rolling",
+                {
+                    "columns": [column],
+                    "by": order_by,
+                    "window": int(window),
+                    "stat": stat or "mean",
+                },
+                why="requested with --rolling",
+            )
+        )
     if interact:
         # One step over all named columns, not one per column: `interact`
         # combines columns with each other, so splitting it would produce no
@@ -294,6 +337,23 @@ def command_for(recipe: Recipe, data_path: str) -> str:
             parts.append(f"--interact {','.join(columns)}")
         elif step.op == "target-encode":
             parts.append(f"--target-encode {','.join(columns)}")
+        elif step.op == "text-length":
+            parts.append(f"--text-length {','.join(columns)}")
+        elif step.op == "tfidf":
+            parts.extend(f"--tfidf {name}" for name in columns)
+        elif step.op == "lag":
+            periods = step.params.get("periods", 1)
+            parts.extend(f"--lag {name}={periods}" for name in columns)
+            order = step.params.get("by")
+            if order and f"--order-by {order}" not in parts:
+                parts.append(f"--order-by {order}")
+        elif step.op == "rolling":
+            window = step.params.get("window", 3)
+            stat = step.params.get("stat", "mean")
+            parts.extend(f"--rolling {name}={window}:{stat}" for name in columns)
+            order = step.params.get("by")
+            if order and f"--order-by {order}" not in parts:
+                parts.append(f"--order-by {order}")
     if drops:
         parts.insert(1, f"--drop {','.join(drops)}")
     if recipe.target:
@@ -699,11 +759,17 @@ _STEP_ORDER = {
     "bin": 8,
     # Interactions last among the derivations, so they multiply the final
     # values rather than the raw ones.
+    # Text and time features derive from cleaned values, before interactions
+    # get the chance to combine them.
+    "text-length": 8.3,
+    "lag": 8.5,
+    "rolling": 8.6,
     "interact": 9,
     "encode": 10,
     # Target encoding last among the encoders: it consumes categories, so
     # anything that reshapes them must already have run.
     "target-encode": 11,
+    "tfidf": 11.5,
     "scale": 12,
 }
 

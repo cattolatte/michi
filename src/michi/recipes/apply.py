@@ -155,6 +155,10 @@ def _apply_step(
         "interact": _apply_interact,
         "binarize": _apply_binarize,
         "bin": _apply_bin,
+        "text-length": _apply_text_length,
+        "tfidf": _apply_tfidf,
+        "lag": _apply_lag,
+        "rolling": _apply_rolling,
         "target-encode": _apply_target_encode,
     }
     present = _resolve_columns(step, frame, strict=strict, notes=notes)
@@ -526,3 +530,128 @@ def _apply_target_encode(
     for position, name in enumerate(usable):
         result[name] = encoded[:, position]
     return result
+
+
+# --- text -------------------------------------------------------------------
+
+
+def _apply_text_length(
+    step: RecipeStep, frame: pd.DataFrame, columns: list[str]
+) -> pd.DataFrame:
+    """Character and word counts — the cheapest signal a text column carries.
+
+    Often most of it: on a free-text field, "how much did they write" predicts
+    more than any single word does.
+    """
+    result = frame.copy()
+    for name in columns:
+        text = result[name].astype("string")
+        result[f"{name}_chars"] = text.str.len().astype("Float64")
+        result[f"{name}_words"] = text.str.split().str.len().astype("Float64")
+    return result
+
+
+def _apply_tfidf(
+    step: RecipeStep, frame: pd.DataFrame, columns: list[str]
+) -> pd.DataFrame:
+    """Term frequencies, with the vocabulary learned from the rows given.
+
+    Fitted: the vocabulary comes from the data, so fitting on a whole file
+    before splitting lets the test fold vote on which words exist.
+    """
+    import pandas as pd
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    limit = int(step.params.get("max_features", 50))
+    ngram = int(step.params.get("ngram", 1))
+    result = frame.copy()
+    for name in columns:
+        text = result[name].fillna("").astype(str)
+        vectorizer = TfidfVectorizer(max_features=limit, ngram_range=(1, max(ngram, 1)))
+        try:
+            matrix = vectorizer.fit_transform(text)
+        except ValueError:
+            # An empty vocabulary — every row blank, or every term a stop
+            # word — is not an error; the column simply carries no terms.
+            continue
+        terms = vectorizer.get_feature_names_out()
+        block = pd.DataFrame(
+            matrix.toarray(),
+            columns=[f"{name}_tf_{term}" for term in terms],
+            index=result.index,
+        )
+        result = pd.concat([result.drop(columns=[name]), block], axis=1)
+    return result
+
+
+# --- time series ------------------------------------------------------------
+
+
+def _ordered(frame: pd.DataFrame, by: str | None) -> pd.DataFrame:
+    """Sort by the stated column, because "earlier" needs a definition."""
+    import pandas as pd
+
+    if not by:
+        msg = "lag and rolling need `by`: the column that defines row order"
+        raise RecipeError(msg)
+    if by not in frame.columns:
+        msg = f"`by` names a column not in the data: {by!r}"
+        raise RecipeError(msg)
+    stamps = pd.to_datetime(frame[by], errors="coerce", format="mixed")
+    if stamps.notna().any():
+        return frame.assign(_order=stamps).sort_values("_order")
+    return frame.assign(_order=frame[by]).sort_values("_order")
+
+
+def _apply_lag(
+    step: RecipeStep, frame: pd.DataFrame, columns: list[str]
+) -> pd.DataFrame:
+    """The value this row's column held N rows earlier.
+
+    Deterministic despite depending on other rows: it reads only *earlier*
+    ones in a stated order, so no future value can reach a past row. That is
+    the property that makes it safe outside the fold, and it is why `by` is
+    required rather than inferred.
+    """
+    periods = int(step.params.get("periods", 1))
+    group = step.params.get("group")
+    working = _ordered(frame, step.params.get("by"))
+
+    for name in columns:
+        if group and str(group) in working.columns:
+            shifted = working.groupby(str(group), observed=True)[name].shift(periods)
+        else:
+            shifted = working[name].shift(periods)
+        working[f"{name}_lag{periods}"] = shifted
+    return working.drop(columns="_order").reindex(frame.index)
+
+
+def _apply_rolling(
+    step: RecipeStep, frame: pd.DataFrame, columns: list[str]
+) -> pd.DataFrame:
+    """A statistic over the N rows up to and including this one."""
+    import pandas as pd
+
+    window = int(step.params.get("window", 3))
+    if window < 2:
+        msg = f"rolling: window must be at least 2 (got {window})"
+        raise RecipeError(msg)
+    stat = str(step.params.get("stat", "mean"))
+    if stat not in {"mean", "sum", "min", "max", "std"}:
+        msg = f"rolling: unknown stat {stat!r}; expected mean, sum, min, max, or std"
+        raise RecipeError(msg)
+
+    group = step.params.get("group")
+    working = _ordered(frame, step.params.get("by"))
+    for name in columns:
+        values = pd.to_numeric(working[name], errors="coerce")
+        if group and str(group) in working.columns:
+            rolled = getattr(
+                values.groupby(working[str(group)]).rolling(window, min_periods=1),
+                stat,
+            )()
+            rolled = rolled.reset_index(level=0, drop=True)
+        else:
+            rolled = getattr(values.rolling(window, min_periods=1), stat)()
+        working[f"{name}_roll{window}_{stat}"] = rolled
+    return working.drop(columns="_order").reindex(frame.index)

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -88,6 +88,20 @@ def bench_command(
     open_report: Annotated[
         bool, typer.Option("--open", help="Open the HTML report in a browser.")
     ] = False,
+    balance: Annotated[
+        bool,
+        typer.Option(
+            "--balance",
+            help="Weight classes inversely to their frequency, where supported.",
+        ),
+    ] = False,
+    oof: Annotated[
+        Path | None,
+        typer.Option(
+            "--oof",
+            help="Write out-of-fold predictions here, one column per model.",
+        ),
+    ] = None,
     explain: Annotated[
         bool,
         typer.Option("--explain/--no-explain", help="Explain what each check means."),
@@ -146,10 +160,15 @@ def bench_command(
                 numeric_impute=impute, encode=encode, scale=not no_scale
             ),
             seed=seed,
+            balance=balance,
+            oof=oof,
         )
     except MichiError as err:
         fail(str(err))
         raise typer.Exit(code=2) from err
+
+    if oof is not None:
+        _write_oof(result, table, resolved_target, oof, console)
 
     render_benchmark(result, console, explain=explain)
 
@@ -223,4 +242,34 @@ def _write_manifest(manifest: RunManifest, destination: Path) -> None:
     destination.write_text(
         json.dumps(manifest.to_dict(), indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+
+
+def _write_oof(
+    result: Any, table: Any, target: str, destination: Path, console: Console
+) -> None:
+    """Write out-of-fold predictions, one column per model.
+
+    Every value here was predicted by a fold that did not train on the row, so
+    these can be stacked on without the leak that in-sample predictions cause.
+    That is the whole reason to want them.
+    """
+    import pandas as pd
+
+    columns: dict[str, Any] = {}
+    for item in result.results:
+        if item.failed is None and item.oof:
+            columns[item.name] = list(item.oof)
+    if not columns:
+        console.print("  [yellow]note:[/] no model produced out-of-fold predictions\n")
+        return
+
+    frame = pd.DataFrame(columns)
+    if target in table.frame.columns:
+        frame.insert(0, target, table.frame[target].to_numpy()[: len(frame)])
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(destination, index=False, encoding="utf-8")
+    console.print(
+        f"  [dim]wrote out-of-fold predictions for {len(columns)} model(s) "
+        f"to {destination}[/]"
     )
