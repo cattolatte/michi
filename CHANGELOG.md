@@ -6,6 +6,40 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-07-27
+
+### Added
+- **`tune --strategy bayes`** (`pip install 'komichi[bayes]'`) — model-based
+  hyperparameter search, proposing each configuration from what it has learned
+  rather than drawing blind.
+
+  [ADR-0004](docs/adr/0004-an-optimiser-that-proposes.md) records why an
+  optimiser that forms opinions belongs in a tool that does not: it has an
+  opinion about *the order candidates from the user's own space are tried in*,
+  which is the same category of decision as fold assignment — a mechanic, not
+  a judgement. It never chooses the model, the space, the metric, or what to
+  ship.
+
+  The real hazard is the opposite of the obvious one. A stronger optimiser is
+  *better at overfitting the inner folds*, so the gap between its own best
+  score and the honest held-out one grows with its sophistication. Measured on
+  the example dataset: `random` gained 0.02019 with a 0.00519 optimism gap;
+  `bayes` gained 0.02303 with a 0.00828 gap. It found the better configuration
+  *and* flattered itself more, exactly as the ADR predicted. michi already
+  printed both numbers side by side; that decision is now load-bearing rather
+  than merely correct.
+
+  Five constraints, all tested: the space stays printable and cannot be
+  widened, nested scoring is not configurable, the optimism gap is always
+  shown, the search is reproducible under a seed, and a missing dependency
+  names the extra rather than silently falling back to a different sampler.
+
+### Fixed
+- Counting evaluated configurations assumed scikit-learn's
+  `cv_results_["params"]`. Optuna's wrapper has no such key and records
+  `trials_` instead, so the first Bayesian search to finish a fold raised
+  `KeyError`. Found by running it, not by a test.
+
 ## [1.7.0] — 2026-07-27
 
 The viewer finally shows what a terminal cannot draw.

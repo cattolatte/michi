@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "komichi"
-version = "1.7.0"
+version = "1.8.0"
 description = "A local-first ML workbench: independent CLI tools that automate the repetitive implementation work of machine learning — never the judgement."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -51,6 +51,7 @@ bench = ["xgboost>=2.0", "lightgbm>=4.3", "catboost>=1.2"]
 excel = ["openpyxl>=3.1"]
 shap = ["shap>=0.45"]
 torch = ["torch>=2.2"]
+bayes = ["optuna>=3.6", "optuna-integration>=3.6"]
 ui = ["fastapi>=0.110", "uvicorn>=0.29"]
 docs = ["mkdocs-material>=9.5"]
 dev = [
@@ -118,6 +119,7 @@ module = [
   "shap.*",
   "questionary.*",
   "torch.*",
+  "optuna.*",
 ]
 ignore_missing_imports = true
 

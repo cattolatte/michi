@@ -16,8 +16,13 @@ Design Principles
   the one to ship.
 - **Deterministic.** Same seed, same space, same result — the whole toolbox
   rests on that, so every sampler is seeded explicitly.
-- Strategies come from scikit-learn. michi adds the space, the nesting, and
-  the honesty about what the number means.
+- **A stronger optimiser needs the guardrail more, not less.** A model-based
+  search is better at overfitting the inner folds — that is the mechanism
+  working, not failing — so the gap between its own best score and the
+  held-out one grows with its sophistication. michi reports both for every
+  strategy (ADR-0004).
+- Strategies come from scikit-learn and Optuna. michi adds the space, the
+  nesting, and the honesty about what the number means.
 """
 
 from __future__ import annotations
@@ -25,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from michi.core.errors import RunError
+from michi.core.errors import RunError, install_hint
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import pandas as pd
@@ -38,7 +43,7 @@ __all__ = [
     "tune_model",
 ]
 
-STRATEGIES: tuple[str, ...] = ("random", "halving", "grid")
+STRATEGIES: tuple[str, ...] = ("random", "halving", "grid", "bayes")
 """Search strategies michi exposes, in the order the docs describe them."""
 
 
@@ -306,7 +311,7 @@ def tune_model(
             greater_is_better=greater_is_better,
         )
         search.fit(train_x, train_y)
-        evaluated = max(evaluated, len(search.cv_results_["params"]))
+        evaluated = max(evaluated, _evaluated(search))
         inner.append(float(search.best_score_))
         winners.append(dict(search.best_params_))
         outer.append(float(scorer(test_y, search.best_estimator_.predict(test_x))))
@@ -363,6 +368,15 @@ def _build_search(
 
     if strategy == "grid":
         return GridSearchCV(pipeline, space, cv=inner_cv, scoring=scoring, n_jobs=1)
+    if strategy == "bayes":
+        return _bayesian_search(
+            pipeline,
+            space,
+            candidates=candidates,
+            cv=inner_cv,
+            scoring=scoring,
+            seed=seed,
+        )
     if strategy == "halving":
         # Successive halving is still behind an explicit opt-in import in
         # scikit-learn; importing it here keeps the failure local and the
@@ -440,3 +454,84 @@ def _most_common(winners: list[dict[str, Any]]) -> dict[str, Any]:
         if repr(sorted(winner.items(), key=lambda item: item[0])) == best_key:
             return winner
     return winners[0]
+
+
+def _bayesian_search(
+    pipeline: Any,
+    space: dict[str, list[Any]],
+    *,
+    candidates: int,
+    cv: Any,
+    scoring: str,
+    seed: int,
+) -> Any:
+    """A model-based search over the user's own space.
+
+    Optuna proposes each configuration from what it has learned about the
+    objective so far, rather than drawing blind. It may sample only from the
+    space it was given — never widen it, never continue past its bounds — so
+    what changes is the order candidates are tried in, not which candidates
+    exist. ADR-0004 records why that distinction is the one that matters.
+    """
+    try:
+        import optuna
+        from optuna.integration import OptunaSearchCV
+    except ImportError as err:
+        # Never fall back to a different strategy: a user who asked for
+        # `bayes` and silently got `random` would be comparing two runs that
+        # were never the same experiment.
+        msg = (
+            "bayesian search needs Optuna, which michi does not install by "
+            f"default. {install_hint('bayes')} — or use --strategy random, "
+            "halving, or grid, which need nothing extra."
+        )
+        raise RunError(msg) from err
+
+    # Optuna logs a line per trial at INFO; a tuning run would bury michi's
+    # own output under a few hundred of them.
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    distributions = {
+        name: optuna.distributions.CategoricalDistribution(
+            [_hashable(value) for value in values]
+        )
+        for name, values in space.items()
+    }
+    return OptunaSearchCV(
+        pipeline,
+        distributions,
+        cv=cv,
+        scoring=scoring,
+        n_trials=min(candidates, _grid_size(space)),
+        random_state=seed,
+        verbose=0,
+    )
+
+
+def _hashable(value: Any) -> Any:
+    """Optuna's categorical distribution requires hashable choices.
+
+    michi's spaces legitimately contain tuples — a network's layer sizes — and
+    those are already hashable; a list would not be, so it is converted rather
+    than rejected.
+    """
+    return tuple(value) if isinstance(value, list) else value
+
+
+def _evaluated(search: Any) -> int:
+    """How many configurations a search actually tried.
+
+    scikit-learn records one entry per candidate under ``cv_results_["params"]``;
+    Optuna's wrapper has no such key and exposes ``trials_`` instead. Reading
+    only the sklearn shape raised ``KeyError`` the first time a Bayesian search
+    finished a fold.
+    """
+    trials = getattr(search, "trials_", None)
+    if trials is not None:
+        return len(trials)
+    results = getattr(search, "cv_results_", {}) or {}
+    params = results.get("params")
+    if params is not None:
+        return len(params)
+    scores = results.get("mean_test_score")
+    return len(scores) if scores is not None else 0

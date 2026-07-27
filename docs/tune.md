@@ -55,6 +55,31 @@ tuning into a lottery whose result does not replicate.
 | `random` (default) | Samples `--candidates` configurations. Best value for a fixed budget on most spaces. |
 | `halving` | Successive halving — many configurations on little data, survivors on more. |
 | `grid` | Every combination. Honest, and expensive. |
+| `bayes` | Model-based search (Optuna). Proposes each configuration from what it has learned. Needs `pip install 'komichi[bayes]'`. |
+
+**A stronger optimiser needs the guardrail more, not less.** A model-based
+search is *better at overfitting the inner folds* — that is the mechanism
+working, not failing — so the gap between its own best score and the honest
+held-out one grows with its sophistication. Measured on the example dataset:
+
+| Strategy | Gain over defaults | Optimism gap |
+|---|---|---|
+| `random` | 0.02019 | 0.00519 |
+| `bayes` | **0.02303** | **0.00828** |
+
+`bayes` found the better configuration *and* flattered itself more. A tool
+that reported the inner score would get more wrong the better its search got,
+which is the worst possible direction for an error to move.
+
+`bayes` may sample only from the space it was given — it never widens it or
+continues past its bounds. What changes is the order candidates are tried in,
+not which candidates exist.
+[ADR-0004](adr/0004-an-optimiser-that-proposes.md) records why that
+distinction is the one that matters, and the five constraints it lives under.
+
+Without the extra installed, michi names it and lists the strategies that work
+now. It never falls back silently: a user who asked for `bayes` and got
+`random` would be comparing two runs that were never the same experiment.
 
 ### The number it reports is not the search's own
 
@@ -93,7 +118,7 @@ silent leak in tabular ML, after target encoding.
 | Option | Default | Purpose |
 |---|---|---|
 | `--model`, `-m` | `hist-gbm` | Model to tune |
-| `--strategy` | `random` | `random`, `halving`, or `grid` |
+| `--strategy` | `random` | `random`, `halving`, `grid`, or `bayes` |
 | `--candidates` | 30 | Configurations to try (random only) |
 | `--space` | built-in | YAML search space replacing michi's |
 | `--list-space` | off | Print the space and exit |

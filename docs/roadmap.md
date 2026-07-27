@@ -22,6 +22,7 @@ edges, in plugins, rather than in the core.
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
 | **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
+| **v1.8** | bayesian search | `tune --strategy bayes` under ADR-0004. **Shipped.** |
 | **v1.7** | charts in `ui` | Confusion matrix, calibration curve, metric intervals, and subgroup scores, drawn from the manifests michi already wrote. **Shipped.** |
 | **v1.6** | `ensemble` | Stacking and soft voting, ranked against the members they combine. **Shipped.** |
 | **v1.5** | neural networks | `mlp` on scikit-learn and `torch-mlp` on PyTorch, as catalogue models every verb already understands. **Shipped.** |
@@ -31,12 +32,6 @@ edges, in plugins, rather than in the core.
 ## Known gaps
 
 Stated plainly, because a roadmap that only lists wins is marketing.
-
-**Bayesian hyperparameter search.** `tune` offers random, successive-halving,
-and grid search over a printable space. A model-based optimiser (Optuna,
-scikit-optimize) would be a real addition, and needs an ADR: it proposes
-configurations from its own beliefs, which is closer to the line michi draws
-than sampling from a space the user can read.
 
 **Deep learning beyond a feed-forward net.** `mlp` and `torch-mlp` cover
 tabular networks. Convolutional and sequence architectures are not in the
