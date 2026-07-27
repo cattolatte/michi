@@ -15,11 +15,13 @@ from michi.core.manifest import Metric
 from michi.report.teaching import teaching_notes
 
 
-def _model(name: str, scores: tuple[float, ...]) -> ModelResult:
+def _model(
+    name: str, scores: tuple[float, ...], *, metric: str = "balanced_accuracy"
+) -> ModelResult:
     mean = sum(scores) / len(scores)
     return ModelResult(
         name=name,
-        metrics=(Metric(name="balanced_accuracy", value=mean),),
+        metrics=(Metric(name=metric, value=mean, greater_is_better=metric != "rmse"),),
         fold_scores=scores,
         fit_seconds=0.1,
     )
@@ -30,6 +32,7 @@ def _result(
     comparisons: tuple[Comparison, ...] = (),
     *,
     n_rows: int = 600,
+    metric: str = "balanced_accuracy",
 ) -> BenchResult:
     from michi.bench.preprocess import PreparationPolicy
 
@@ -37,7 +40,7 @@ def _result(
         task="classification",
         target="purchased",
         folds=5,
-        primary_metric="balanced_accuracy",
+        primary_metric=metric,
         results=models,
         comparisons=comparisons,
         policy=PreparationPolicy(),
@@ -203,3 +206,58 @@ def test_a_degenerate_row_count_does_not_crash(rows: int) -> None:
     """Arithmetic on an empty dataset must not raise on the way out."""
     result = _result((_model("linear", (0.9, 0.88, 0.9, 0.89, 0.9)),), n_rows=rows)
     assert isinstance(teaching_notes(result), tuple)
+
+
+# --- metrics that improve downward ----------------------------------------
+
+
+def test_a_lower_is_better_metric_is_not_reported_backwards() -> None:
+    """RMSE improves downward; subtracting one fixed way inverts the verdict.
+
+    Reporting "the features bought 0.4 of rmse" when the model is *worse*
+    than the baseline is the most misleading sentence this module could
+    produce, so the direction comes from the metric rather than a guess.
+    """
+    result = _result(
+        (
+            _model("linear", (2.0, 2.1, 1.9, 2.0, 2.0), metric="rmse"),
+            _model("dummy", (3.0, 3.1, 2.9, 3.0, 3.0), metric="rmse"),
+        ),
+        metric="rmse",
+    )
+    joined = " ".join(teaching_notes(result))
+    assert "No model beat" not in joined
+    assert "what the modelling bought" in joined
+
+
+def test_a_baseline_that_wins_is_not_compared_against_itself() -> None:
+    """When the dummy leads, "the best of the rest" would name the dummy."""
+    result = _result(
+        (
+            _model("dummy", (2.0, 2.1, 1.9, 2.0, 2.0), metric="rmse"),
+            _model("linear", (3.0, 3.1, 2.9, 3.0, 3.0), metric="rmse"),
+        ),
+        metric="rmse",
+    )
+    note = teaching_notes(result)[0]
+    assert "The dummy baseline won" in note
+    assert "dummy, the best of the rest" not in note
+
+
+def test_a_tie_says_worse_or_better_not_above_or_below() -> None:
+    """ "Above" reads as praise, and on RMSE it means the opposite."""
+    result = _result(
+        (
+            _model("linear", (2.00, 2.10, 1.90, 2.00, 2.00), metric="rmse"),
+            _model("rf", (2.05, 2.02, 2.11, 1.98, 2.06), metric="rmse"),
+            _model("dummy", (3.0,) * 5, metric="rmse"),
+        ),
+        (
+            Comparison("rf", "linear", 0.03, 0.6, 0.6, False),
+            Comparison("dummy", "linear", 1.0, 0.001, 0.001, True),
+        ),
+        metric="rmse",
+    )
+    tie = next(note for note in teaching_notes(result) if "swapped places" in note)
+    assert "above" not in tie and "below" not in tie
+    assert "worse than" in tie or "better than" in tie

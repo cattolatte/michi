@@ -205,6 +205,15 @@ def recipe_from_flags(
         if not target:
             msg = "--target-encode needs --target: the encoding is against a label"
             raise RecipeError(msg)
+        if target in target_encode:
+            # Encoding the label with its own mean is a no-op that looks like
+            # a step. Silently dropping it would leave a recipe claiming to do
+            # something it does not.
+            msg = (
+                f"--target-encode cannot encode the target itself ({target!r}); "
+                "name the categorical feature columns instead"
+            )
+            raise RecipeError(msg)
         steps.append(
             RecipeStep(
                 "target-encode",

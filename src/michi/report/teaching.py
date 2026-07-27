@@ -65,14 +65,27 @@ def _baseline_note(result: BenchResult, leader: object) -> list[str]:
 
     best = float(leader.primary.value)  # type: ignore[attr-defined]
     floor = float(dummy.primary.value)
-    gap = best - floor
     name = leader.name  # type: ignore[attr-defined]
 
+    # RMSE and its relatives improve downward. Subtracting in one fixed
+    # direction would report a regression benchmark backwards — and reporting
+    # "the features bought 0.4 of rmse" when the model is *worse* than the
+    # baseline is the single most misleading thing this module could say.
+    higher_is_better = bool(leader.primary.greater_is_better)  # type: ignore[attr-defined]
+    gap = (best - floor) if higher_is_better else (floor - best)
+
+    if name == "dummy":
+        return [
+            f"The dummy baseline won. It scores {floor:.4g} on "
+            f"{result.primary_metric} by ignoring the features entirely, and "
+            "no model here did better. That is a result about the features, "
+            "not about the models."
+        ]
     if gap <= 0:
         return [
-            f"No model beat the dummy baseline. The baseline scores "
+            "No model beat the dummy baseline. It scores "
             f"{floor:.4g} on {result.primary_metric} by ignoring the features "
-            f"entirely, and {name}, the best of the rest, scores {best:.4g}. "
+            f"entirely; {name}, the best of the rest, scores {best:.4g}. "
             "Whatever these features carry, none of these models found it."
         ]
     return [
@@ -135,12 +148,18 @@ def _tie_notes(result: BenchResult, leader: object) -> list[str]:
         if spread <= 0 or mean == 0:
             continue
 
+        # "Above" reads as praise, and on RMSE it is the opposite. The leader
+        # is the leader whichever way the metric points, so say the thing the
+        # reader needs — worse or better — rather than the arithmetic sign.
+        higher_is_better = bool(leader.primary.greater_is_better)  # type: ignore[attr-defined]
+        behind = mean > 0 if higher_is_better else mean < 0
         notes.append(
             f"{comparison.model} scored {abs(mean):.4g} "
-            f"{'below' if mean > 0 else 'above'} {comparison.leader} on average, "
-            f"but the two swapped places by ±{spread:.4g} from fold to fold. "
-            "The gap is smaller than the disagreement about the gap, which is "
-            f"what {comparison.formatted_p} is reporting."
+            f"{'worse than' if behind else 'better than'} {comparison.leader} "
+            f"on {result.primary_metric}, but the two swapped places by "
+            f"±{spread:.4g} from fold to fold. The gap is smaller than the "
+            "disagreement about the gap, which is what "
+            f"{comparison.formatted_p} is reporting."
         )
 
         needed = _rows_to_separate(result.n_rows, mean, spread, result.folds)

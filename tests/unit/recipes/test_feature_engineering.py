@@ -473,3 +473,25 @@ def test_the_menu_never_preselects(messy_csv: Path) -> None:
         assert not hasattr(item, "default")
         assert "should" not in item.detail.lower()
         assert "recommend" not in item.detail.lower()
+
+
+def test_target_encoding_the_target_itself_is_refused() -> None:
+    """A step that encodes the label with its own mean is a no-op in disguise.
+
+    Dropping it silently would leave a recipe claiming to do something it does
+    not, which is worse than the mistake it hides.
+    """
+    with pytest.raises(RecipeError, match="cannot encode the target itself"):
+        recipe_from_flags(None, target_encode=["purchased"], target="purchased")
+
+
+def test_target_encoding_without_a_target_is_refused() -> None:
+    """The encoding is against a label; there is nothing to encode without one."""
+    with pytest.raises(RecipeError, match="needs --target"):
+        recipe_from_flags(None, target_encode=["city"])
+
+
+def test_target_encoding_round_trips_through_its_command() -> None:
+    """Flag parity holds for the newest operation too."""
+    recipe = recipe_from_flags(None, target_encode=["city", "postcode"], target="y")
+    assert "--target-encode city,postcode" in command_for(recipe, "d.csv")
