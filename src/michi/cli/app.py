@@ -24,6 +24,7 @@ from rich.console import Console
 from michi import __version__
 from michi.cli.bench_cmd import bench_command
 from michi.cli.clean_cmd import apply_command, clean_command, export_command
+from michi.cli.ensemble_cmd import ensemble_command
 from michi.cli.eval_cmd import eval_command
 from michi.cli.fit_cmd import fit_command, predict_command
 from michi.cli.inspect_cmd import inspect_command
@@ -49,6 +50,7 @@ app.command("report")(report_command)
 app.command("clean")(clean_command)
 app.command("apply")(apply_command)
 app.command("export")(export_command)
+app.command("ensemble")(ensemble_command)
 app.command("tune")(tune_command)
 app.command("fit")(fit_command)
 app.command("predict")(predict_command)

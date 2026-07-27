@@ -16,13 +16,20 @@ Design Principles
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Final
 
 from michi.core.errors import RunError, install_hint
 
-__all__ = ["ModelEntry", "available_models", "build_model", "model_entry"]
+__all__ = [
+    "ModelEntry",
+    "available_models",
+    "build_model",
+    "model_entry",
+    "register_transient",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -369,6 +376,50 @@ _REGISTRY: Final[tuple[ModelEntry, ...]] = (
 )
 
 
+_TRANSIENT: dict[str, ModelEntry] = {}
+"""Entries registered for the lifetime of one command.
+
+An ensemble is assembled from models the user named, so it cannot be a
+constant in the catalogue. Registering it briefly lets `run_benchmark` treat
+it as an ordinary model — same folds, same baseline, same significance test —
+without a single branch anywhere downstream asking "is this an ensemble?".
+"""
+
+
+@contextmanager
+def register_transient(
+    name: str,
+    *,
+    summary: str,
+    factory: Any,
+    needs_scaling: bool = False,
+    tasks: frozenset[str] = _BOTH,
+) -> Iterator[None]:
+    """Add a catalogue entry for the duration of a `with` block.
+
+    Raises
+    ------
+    RunError
+        If the name would shadow a permanent catalogue entry, which would make
+        `--models rf` mean different things in different commands.
+    """
+    if any(entry.name == name for entry in _REGISTRY):
+        msg = f"{name!r} is already a catalogue model and cannot be redefined"
+        raise RunError(msg)
+
+    _TRANSIENT[name] = ModelEntry(
+        name=name,
+        tasks=tasks,
+        summary=summary,
+        factory=factory,
+        needs_scaling=needs_scaling,
+    )
+    try:
+        yield
+    finally:
+        _TRANSIENT.pop(name, None)
+
+
 def _plugin_models() -> tuple[ModelEntry, ...]:
     """Models contributed by installed plugins.
 
@@ -407,7 +458,7 @@ def available_models(task: str | None = None) -> tuple[ModelEntry, ...]:
     >>> "lasso" in names and "naive-bayes" not in names
     True
     """
-    entries = _REGISTRY + _plugin_models()
+    entries = _REGISTRY + _plugin_models() + tuple(_TRANSIENT.values())
     if task is None:
         return entries
     return tuple(entry for entry in entries if entry.supports(task))

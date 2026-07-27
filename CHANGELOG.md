@@ -6,6 +6,33 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-07-27
+
+### Added
+- **`michi ensemble`** — stack or soft-vote several models, and find out
+  whether it was worth it. `--method stack` trains a meta-learner on
+  out-of-fold member predictions; `--method vote` averages them.
+
+  The ensemble is cross-validated **beside its own members** and tested with
+  the same corrected resampled *t*-test, so the leaderboard answers the only
+  question that matters. On the example dataset the stack scored 0.881 against
+  linear's 0.884 and took 7.1s against 0.0s — a tie, reported as a tie. Every
+  other tool prints the ensemble score alone, where a combination that gained
+  nothing looks like a win.
+
+  Each member carries its own preparation, because standardisation is right
+  for a linear model and pointless for a tree; sharing one pipeline would
+  impose one model's needs on all of them.
+
+  michi picks no members, prunes none for scoring poorly, and weights none by
+  validation score. Those are modelling judgements, and a tool that makes them
+  silently is an AutoML system wearing a different hat.
+- `register_transient` in the model registry: an ensemble is assembled from
+  what the user named, so it joins the catalogue for the duration of one
+  command and leaves cleanly — including when the run raises. Two tests pin
+  that, because a leftover entry would make `bench --models ensemble` mean
+  whatever the last ensemble command happened to build.
+
 ## [1.5.0] — 2026-07-27
 
 Neural networks, and a scaling bug they exposed.

@@ -22,6 +22,7 @@ edges, in plugins, rather than in the core.
 | **v1.0** | freeze | Artifact schemas, the CLI surface, and the plugin contract come under semantic versioning. **Shipped.** |
 | **v1.1** | feature engineering + `path` | `datepart`, `log`, `interact`, `binarize`, `bin` as recipe operations; `path` and `walk` in the console. **Shipped.** |
 | **v1.2** | teaching mode | `bench --explain` explains the run's own numbers: the gap over the baseline, the fold spread behind the interval, why two models tied, and the rows it would take to separate them. **Shipped.** |
+| **v1.6** | `ensemble` | Stacking and soft voting, ranked against the members they combine. **Shipped.** |
 | **v1.5** | neural networks | `mlp` on scikit-learn and `torch-mlp` on PyTorch, as catalogue models every verb already understands. **Shipped.** |
 | **v1.4** | `tune` · `fit` · `predict` | Hyperparameter search with nested scoring; train and save a model; predict on unlabelled data. Closes the loop from raw CSV to submission file. **Shipped.** |
 | **v1.3** | target encoding + feature menu | `target-encode` with an out-of-fold encoder michi owns; an interactive column picker for feature engineering. **Shipped.** |
