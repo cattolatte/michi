@@ -21,8 +21,11 @@ from michi.bench import ModelEntry
 def _build(task: str, seed: int):
     from my_library import MyClassifier, MyRegressor
 
-    return MyClassifier(random_state=seed) if task == "classification" \
+    return (
+        MyClassifier(random_state=seed)
+        if task == "classification"
         else MyRegressor(random_state=seed)
+    )
 
 
 def models():
