@@ -18,7 +18,7 @@ judgement call to you.
 ## Install
 
 ```bash
-pip install michi-ml
+pip install komichi
 ```
 
 ## First command

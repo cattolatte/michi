@@ -39,25 +39,28 @@ account to create, and nothing ever leaves your machine.
 > means not merely a road, but *a practice one walks for oneself*.
 >
 > That is the entire design brief. Michi clears the path. You walk it.
+>
+> On PyPI the name was taken, so michi is distributed as **小道** (*komichi*) —
+> a small path, a lane. The command you type is still `michi`.
 
 <br>
 
 ## 使い方 — getting started
 
 ```bash
-pip install michi-ml
+pip install komichi
 michi inspect data.csv --target label --explain
 ```
 
-The distribution is `michi-ml` because `michi` was already taken on PyPI. The
-command and the import are both `michi`.
+The package is `komichi` (小道, *a small path*) because `michi` was already
+taken on PyPI. The command and the import are both `michi`.
 
 New here? The [quickstart](docs/quickstart.md) takes one messy CSV to a
 compared, reported model in fifteen minutes, and asks for no commitment along
 the way.
 
-Optional extras: `michi-ml[bench]` (XGBoost, LightGBM, CatBoost), `michi-ml[excel]`,
-`michi-ml[shap]`, `michi-ml[ui]`.
+Optional extras: `komichi[bench]` (XGBoost, LightGBM, CatBoost), `komichi[excel]`,
+`komichi[shap]`, `komichi[ui]`.
 
 <br>
 

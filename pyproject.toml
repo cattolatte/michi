@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "michi-ml"
+name = "komichi"
 version = "1.0.0"
 description = "A local-first ML workbench: independent CLI tools that automate the repetitive implementation work of machine learning — never the judgement."
 readme = "README.md"

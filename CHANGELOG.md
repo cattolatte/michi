@@ -21,7 +21,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   package version disagree.
 
 ### Changed
-- The distribution is **`michi-ml`** on PyPI, because `michi` was already
+- The distribution is **`komichi`** on PyPI, because `michi` was already
   taken. The command and the import are both still `michi`.
 - A *configured* target is a hint, not a command: running against data that
   lacks it prints a note and continues, rather than failing a run the user did
@@ -29,7 +29,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Error messages naming an extra were rendered as terminal markup, so
-  `pip install 'michi-ml[bench]'` reached users as `pip install 'michi-ml'` —
+  `pip install 'komichi[bench]'` reached users as `pip install 'komichi'` —
   an install command that silently does the wrong thing. Messages are now
   rendered verbatim, and a test asserts the brackets survive.
 - The install command is built from one constant, and a test fails if any

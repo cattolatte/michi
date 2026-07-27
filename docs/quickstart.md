@@ -4,10 +4,10 @@ Fifteen minutes, one messy CSV, and no commitment. Nothing here asks you to
 restructure a project, adopt a template, or import anything.
 
 ```bash
-pip install michi-ml
+pip install komichi
 ```
 
-(The distribution is `michi-ml`; the command is `michi`.)
+(The package is `komichi` — 小道, *a small path*. The command is `michi`.)
 
 ## 1. Look at the data
 

@@ -60,7 +60,7 @@ Prints the menu with a factual line about each. michi never picks for you and
 never calls a model best. Everything trains **locally** — these are algorithms,
 not downloads, and michi makes no network calls.
 
-| Available in the base install | With `michi-ml[bench]` |
+| Available in the base install | With `komichi[bench]` |
 |---|---|
 | `dummy`, `linear`, `ridge`, `lasso`, `tree`, `rf`, `extra-trees`, `hist-gbm`, `knn`, `svm`, `naive-bayes` | `xgb`, `lgbm`, `catboost` |
 

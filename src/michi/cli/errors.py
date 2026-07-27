@@ -3,7 +3,7 @@
 Design Principles
 -----------------
 - **An error message is data, not markup.** michi's own messages name package
-  extras like ``michi-ml[bench]``, and third-party messages can contain
+  extras like ``komichi[bench]``, and third-party messages can contain
   anything at all. Rendering either as rich markup silently swallows the
   square brackets — which turns an actionable install command into a broken
   one. Messages are therefore escaped, and only michi's own prefix is styled.

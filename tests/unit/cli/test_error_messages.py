@@ -3,7 +3,7 @@
 michi promises that an error names the exact command to run next. Two things
 quietly break that promise: renaming the distribution without updating the
 messages, and letting a terminal renderer interpret the square brackets in
-``michi-ml[bench]`` as markup and swallow them. Both have happened; neither
+``komichi[bench]`` as markup and swallow them. Both have happened; neither
 should again.
 """
 
@@ -33,8 +33,9 @@ def test_the_hint_names_the_distribution_not_the_import_name() -> None:
 def test_the_hint_is_the_only_place_the_package_name_is_written() -> None:
     """A rename must not be able to leave a stale command in a message.
 
-    Any hardcoded `pip install michi...` in the source is a message that a
-    future rename will silently falsify.
+    Any hardcoded install command in the source is a message that a future
+    rename will silently falsify — which is exactly what happened when the
+    distribution became `komichi`.
     """
     source = Path(__file__).parent.parent.parent.parent / "src" / "michi"
     offenders: list[str] = []
@@ -44,7 +45,7 @@ def test_the_hint_is_the_only_place_the_package_name_is_written() -> None:
         for number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
         ):
-            if re.search(r"pip install\s+'?michi", line):
+            if re.search(r"pip install\s+'?(michi|komichi)", line):
                 offenders.append(f"{path.name}:{number}")
     assert offenders == []
 

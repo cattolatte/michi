@@ -30,13 +30,15 @@ __all__ = [
 ]
 
 
-DISTRIBUTION = "michi-ml"
+DISTRIBUTION = "komichi"
 """The name michi is distributed under.
 
-The import name and the command are both ``michi``; the distribution needed a
-different name because ``michi`` was already taken on PyPI. Error messages
-tell users what to *install*, so they must use this — one constant, so a
-rename can never leave a message pointing at a package that does not exist.
+``michi`` was already taken on PyPI, so the distribution is ``komichi`` —
+小道, a small path. The command and the import are both ``michi``.
+
+Error messages tell users what to *install*, so they must use this name. It
+lives in one constant precisely so that a rename can never leave a message
+pointing at a package nobody can install.
 """
 
 
@@ -46,9 +48,9 @@ def install_hint(extra: str | None = None) -> str:
     Examples
     --------
     >>> install_hint("bench")
-    "pip install 'michi-ml[bench]'"
+    "pip install 'komichi[bench]'"
     >>> install_hint()
-    'pip install michi-ml'
+    'pip install komichi'
     """
     if extra is None:
         return f"pip install {DISTRIBUTION}"
