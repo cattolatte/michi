@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The dead-flag audit that found four bugs is now a test. It walks every
+  command's signature and asserts each parameter is referenced in its own
+  body, alongside checks that every verb is documented and every recipe
+  operation is reachable from a flag. A flag that accepts a value and does
+  nothing is invisible to a normal suite, because there is nothing to assert
+  against a feature that was never connected.
+
 ## [2.0.0] — 2026-07-27
 
 The whole toolbox is now under the guarantee, not the third of it that existed
