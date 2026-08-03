@@ -4,9 +4,11 @@ Each milestone ships one independently useful verb as a complete vertical
 slice — command, logic, artifact, documentation, tests — and leaves michi
 releasable. Releases happen when a milestone's bar is met, never by date.
 
-**Every milestone below has shipped.** From 1.0 the artifact schemas, the CLI
-surface, and the plugin contract are frozen under semantic versioning
-([ADR-0002](adr/0002-freeze-the-public-surface.md)); growth now happens at the
+**Every milestone below has shipped.** From 2.0 the artifact schemas, all
+seventeen verbs, all seventeen recipe operations, the plugin contract, and the
+documented Python API are frozen under semantic versioning
+([ADR-0002](adr/0002-freeze-the-public-surface.md),
+[ADR-0005](adr/0005-freeze-the-expanded-surface.md)); growth now happens at the
 edges, in plugins, rather than in the core.
 
 | Version | Verb | What it delivers |
@@ -31,6 +33,7 @@ edges, in plugins, rather than in the core.
 | **v1.9** | `split` + importance | Grouped and time-based splits; permutation importance through the predict protocol. **Shipped.** |
 | **v1.10** | `diff` · `threshold` · `errors` | Drift against a baseline; the decision cutoff; the rows behind the score. **Shipped.** |
 | **v1.11** | text · time · oof · calibration | TF-IDF and lengths, lag and rolling windows, out-of-fold predictions, class weights, probability calibration. **Shipped.** |
+| **v2.0** | re-freeze | Group-aware cross-validation, user-chosen metrics, a documented Python API — and ADR-0005 bringing the whole expanded surface under semver. **Shipped.** |
 
 ## Known gaps
 

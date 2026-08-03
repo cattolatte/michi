@@ -155,6 +155,38 @@ The sample-size figure is labelled back-of-envelope because it is one. It
 assumes the measured difference is real and that error falls with √n — both
 optimistic. It is an order of magnitude, not a target.
 
+## `michi ensemble` — combining the models you compared
+
+```bash
+michi ensemble data.csv --target churned --models linear,rf,hist-gbm
+```
+
+Stacks or soft-votes several models and cross-validates the combination
+**beside its own members**, under the same folds, the same dummy baseline, and
+the same corrected resampled *t*-test:
+
+```
+  model      balanced_accuracy   vs leader                     fit
+  ─────────────────────────────────────────────────────────────────
+  linear                 0.884   leader                       0.0s
+  rf                     0.884   tied with leader (p=0.99)    0.5s
+  ensemble               0.881   tied with leader (p=0.667)   7.1s
+  dummy                    0.5   worse (p=0.0071)             0.0s
+```
+
+That output is the feature. The stack tied its best member and cost 7.1
+seconds against 0.0. Reported alone — as almost every tool reports it — it
+would have looked like a result.
+
+`--method stack` trains a meta-learner on out-of-fold member predictions;
+`--method vote` averages them, preferring soft voting so a member's confidence
+survives. Each member carries its own preparation, because standardisation is
+right for a linear model and pointless for a tree.
+
+michi picks no members, prunes none for scoring poorly, and weights none by
+validation score. Those are modelling judgements, and a tool that makes them
+silently is an AutoML system wearing a different hat.
+
 ## Output
 
 Every model gets its own run manifest in `runs/`, sharing a `group_id` so
@@ -179,6 +211,8 @@ offline page.
 | `--open` | off | Open the report in a browser |
 | `--recipe` | none | Cleaning recipe to apply |
 | `--seed` | 0 | Seed for folds and models |
+| `--group` | none | Keep rows sharing this column in one fold |
+| `--metric` | task default | Rank, interval, and test by this metric |
 | `--oof` | none | Write out-of-fold predictions, one column per model |
 | `--balance` | off | Weight classes inversely to their frequency, where supported |
 | `--explain` | off | Explain this run's own numbers, and what each check means |

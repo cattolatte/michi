@@ -69,6 +69,21 @@ def tune_command(
     inner_cv: Annotated[
         int, typer.Option("--inner-cv", help="Folds used inside the search.")
     ] = 3,
+    metric: Annotated[
+        str | None,
+        typer.Option(
+            "--metric",
+            help="Rank and test by this metric instead of michi's default.",
+        ),
+    ] = None,
+    group: Annotated[
+        str | None,
+        typer.Option(
+            "--group",
+            help="Keep rows sharing this column in one fold. Use it whenever "
+            "rows share an entity.",
+        ),
+    ] = None,
     task: Annotated[
         str | None,
         typer.Option("--task", help="Force `classification` or `regression`."),
@@ -116,7 +131,15 @@ def tune_command(
         from michi.evaluation.metrics import detect_task
 
         labels = table.frame[resolved_target]
-        features = table.frame.drop(columns=[resolved_target])
+        group_values = (
+            table.frame[group].astype("object").to_numpy()
+            if group and group in table.frame.columns
+            else None
+        )
+        # The grouping column identifies the entity; leaving it as a feature
+        # would hand the model the very thing grouping exists to hide.
+        dropped = [resolved_target] + ([group] if group_values is not None else [])
+        features = table.frame.drop(columns=dropped)
         loaded_recipe = None
         if recipe is not None:
             from michi.recipes import apply_deterministic, load_recipe
@@ -151,6 +174,8 @@ def tune_command(
             inner_folds=inner_cv,
             seed=resolved_seed,
             recipe=loaded_recipe,
+            groups=group_values,
+            metric=metric,
         )
     except MichiError as err:
         fail(str(err))

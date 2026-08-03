@@ -201,9 +201,11 @@ every session exports back to plain one-shot invocations.
 
 Full options: [`michi inspect`](docs/inspect.md) · [`michi eval`](docs/eval.md) ·
 [`michi bench`](docs/bench.md) · [`michi tune` · `fit` · `predict`](docs/tune.md) ·
+[`michi diff`](docs/diff.md) · [`threshold` · `errors` · `split`](docs/analysis.md) ·
 [`michi report`](docs/report.md) ·
 [`michi clean`](docs/clean.md) · [`michi sweep`](docs/sweep.md) ·
-[`michi ui`](docs/ui.md) · [the console](docs/console.md).
+[`michi ui`](docs/ui.md) · [the console](docs/console.md) ·
+[the Python API](docs/api.md).
 
 <br>
 

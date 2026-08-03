@@ -53,6 +53,14 @@ def ensemble_command(
         str | None,
         typer.Option("--task", help="Force `classification` or `regression`."),
     ] = None,
+    group: Annotated[
+        str | None,
+        typer.Option(
+            "--group",
+            help="Keep rows sharing this column in one fold. Use it whenever "
+            "rows share an entity.",
+        ),
+    ] = None,
     explain: Annotated[
         bool,
         typer.Option("--explain/--no-explain", help="Explain the numbers produced."),
@@ -119,6 +127,7 @@ def ensemble_command(
             folds=cv,
             recipe=loaded_recipe,
             seed=resolved_seed,
+            group=group,
         )
     except MichiError as err:
         fail(str(err))

@@ -112,6 +112,8 @@ def run_benchmark(
     seed: int = 0,
     balance: bool = False,
     oof: Path | None = None,
+    group: str | None = None,
+    metric: str | None = None,
     group_id: str | None = None,
 ) -> BenchResult:
     """Train and compare models under cross-validation.
@@ -143,6 +145,13 @@ def run_benchmark(
         what michi thinks the right answer is.
     oof
         Where to write out-of-fold predictions, or ``None`` to skip them.
+    metric
+        Metric to rank, interval, and significance-test by. Defaults to
+        michi's headline metric for the task; a name michi does not know is
+        looked up among ``michi.metrics`` entry points.
+    group
+        Column whose rows must stay in one fold. Required whenever rows share
+        an entity: without it, cross-validation reports memory as skill.
     group_id
         Identifier shared by all manifests from this benchmark.
 
@@ -187,7 +196,14 @@ def run_benchmark(
         )
         raise DataError(msg)
 
-    features = usable.drop(columns=[target])
+    if group is not None and group not in usable.columns:
+        msg = f"--group names a column not in the data: {group!r}"
+        raise DataError(msg)
+    group_values = (
+        np.asarray(usable[group].astype("object")) if group is not None else None
+    )
+
+    features = usable.drop(columns=[target] + ([group] if group else []))
     labels = np.asarray(usable[target])
     resolved_task = task or detect_task(labels)
     resolved_policy = policy or PreparationPolicy()
@@ -203,8 +219,8 @@ def run_benchmark(
             msg = f"{name!r} does not support {resolved_task}; it supports: {supported}"
             raise RunError(msg)
 
-    splitter, folds = _make_splitter(resolved_task, folds, labels, seed)
-    scorers = _scorers(resolved_task)
+    splitter, folds = _make_splitter(resolved_task, folds, labels, seed, group_values)
+    scorers = _scorers(resolved_task, metric)
     primary_metric = scorers[0][0]
 
     results: list[ModelResult] = []
@@ -220,6 +236,7 @@ def run_benchmark(
                 policy=resolved_policy,
                 recipe=recipe,
                 seed=seed,
+                groups=group_values,
                 balance=balance,
                 collect_oof=oof is not None,
             )
@@ -289,11 +306,41 @@ def _with_baseline(models: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _make_splitter(
-    task: str, folds: int, labels: np.ndarray[Any, Any], seed: int
+    task: str,
+    folds: int,
+    labels: np.ndarray[Any, Any],
+    seed: int,
+    groups: np.ndarray[Any, Any] | None = None,
 ) -> tuple[Any, int]:
-    """Build the cross-validation splitter, stratifying where it applies."""
+    """Build the cross-validation splitter, stratifying where it applies.
+
+    When `groups` is given, every row sharing a group lands in the same fold.
+    Without it, a dataset with repeated entities — five rows per customer —
+    puts four of a customer's rows in training and one in test, and the score
+    that comes back is memory rather than generalisation. `michi split` has
+    prevented that at the file level since v1.9; not honouring it here left
+    michi contradicting its own advice.
+    """
     import numpy as np
-    from sklearn.model_selection import KFold, StratifiedKFold
+    from sklearn.model_selection import (
+        GroupKFold,
+        KFold,
+        StratifiedGroupKFold,
+        StratifiedKFold,
+    )
+
+    if groups is not None:
+        distinct = len(np.unique(groups))
+        if distinct < folds:
+            # Fewer groups than folds cannot be split without splitting a
+            # group, which is the one thing this exists to prevent.
+            folds = max(2, distinct)
+        if task == "classification":
+            return (
+                StratifiedGroupKFold(n_splits=folds, shuffle=True, random_state=seed),
+                folds,
+            )
+        return GroupKFold(n_splits=folds), folds
 
     if task != "classification":
         return KFold(n_splits=folds, shuffle=True, random_state=seed), folds
@@ -311,8 +358,41 @@ def _make_splitter(
     )
 
 
-def _scorers(task: str) -> tuple[tuple[str, Any, bool], ...]:
-    """Metric functions for a task, headline metric first."""
+def _custom_scorer(name: str) -> tuple[str, Any, bool] | None:
+    """Look up a metric contributed by a plugin, or ``None`` if there is none.
+
+    A competition scores on its own metric, and optimising anything else is
+    climbing the wrong hill. michi cannot ship every metric anyone will need,
+    so `michi.metrics` entry points let a user supply one — and because it is
+    an entry point rather than a path to import, the metric travels with the
+    environment the run is reproduced in.
+    """
+    from importlib.metadata import entry_points
+
+    for entry in entry_points(group="michi.metrics"):
+        if entry.name != name:
+            continue
+        try:
+            loaded = entry.load()
+        except Exception as err:  # third-party failure boundary
+            msg = f"metric plugin {name!r} could not be loaded: {err}"
+            raise RunError(msg) from err
+        function = getattr(loaded, "score", loaded)
+        if not callable(function):
+            msg = f"metric plugin {name!r} is not callable and has no `score`"
+            raise RunError(msg)
+        greater = bool(getattr(loaded, "greater_is_better", True))
+        return (name, function, greater)
+    return None
+
+
+def _scorers(task: str, metric: str | None = None) -> tuple[tuple[str, Any, bool], ...]:
+    """Metric functions for a task, headline metric first.
+
+    A named `metric` is promoted to the front, so every ranking, interval, and
+    significance test in the run is computed against the thing the user
+    actually cares about rather than michi's default.
+    """
     import numpy as np
     from sklearn import metrics as skm
 
@@ -324,21 +404,83 @@ def _scorers(task: str) -> tuple[tuple[str, Any, bool], ...]:
                 skm.f1_score(truth, prediction, average=average, zero_division=0)
             )
 
-        return (
-            ("balanced_accuracy", skm.balanced_accuracy_score, True),
-            ("accuracy", skm.accuracy_score, True),
-            ("f1", _f1, True),
-            ("mcc", skm.matthews_corrcoef, True),
+        return _promote(
+            (
+                ("balanced_accuracy", skm.balanced_accuracy_score, True),
+                ("accuracy", skm.accuracy_score, True),
+                ("f1", _f1, True),
+                ("mcc", skm.matthews_corrcoef, True),
+            ),
+            metric,
         )
 
     def _rmse(truth: Any, prediction: Any) -> float:
         return float(np.sqrt(skm.mean_squared_error(truth, prediction)))
 
-    return (
-        ("rmse", _rmse, False),
-        ("mae", skm.mean_absolute_error, False),
-        ("r2", skm.r2_score, True),
+    def _rmsle(truth: Any, prediction: Any) -> float:
+        # Negatives have no logarithm; clipping rather than raising keeps a
+        # model that undershoots to -0.001 from failing the whole run.
+        return float(
+            np.sqrt(
+                skm.mean_squared_error(
+                    np.log1p(np.clip(truth, 0, None)),
+                    np.log1p(np.clip(prediction, 0, None)),
+                )
+            )
+        )
+
+    def _mape(truth: Any, prediction: Any) -> float:
+        actual = np.asarray(truth, dtype=float)
+        nonzero = actual != 0
+        if not nonzero.any():
+            return float("nan")
+        return float(
+            np.mean(
+                np.abs(
+                    (actual[nonzero] - np.asarray(prediction, dtype=float)[nonzero])
+                    / actual[nonzero]
+                )
+            )
+        )
+
+    return _promote(
+        (
+            ("rmse", _rmse, False),
+            ("mae", skm.mean_absolute_error, False),
+            ("r2", skm.r2_score, True),
+            ("rmsle", _rmsle, False),
+            ("mape", _mape, False),
+        ),
+        metric,
     )
+
+
+def _promote(
+    scorers: tuple[tuple[str, Any, bool], ...], metric: str | None
+) -> tuple[tuple[str, Any, bool], ...]:
+    """Put the requested metric first, pulling in a plugin if michi lacks it.
+
+    The head of this tuple is what the leaderboard ranks by, what the interval
+    describes, and what the significance test compares — so promoting is the
+    whole of "optimise the metric I actually care about".
+    """
+    if not metric:
+        return scorers
+
+    for index, entry in enumerate(scorers):
+        if entry[0] == metric:
+            return (entry, *scorers[:index], *scorers[index + 1 :])
+
+    custom = _custom_scorer(metric)
+    if custom is not None:
+        return (custom, *scorers)
+
+    known = ", ".join(name for name, _, _ in scorers)
+    msg = (
+        f"unknown metric {metric!r}. Built in for this task: {known}. "
+        "Supply your own through a `michi.metrics` entry point."
+    )
+    raise RunError(msg)
 
 
 def _run_one_model(
@@ -352,6 +494,7 @@ def _run_one_model(
     policy: PreparationPolicy,
     recipe: Recipe | None,
     seed: int,
+    groups: np.ndarray[Any, Any] | None = None,
     balance: bool = False,
     collect_oof: bool = False,
 ) -> ModelResult:
@@ -366,7 +509,7 @@ def _run_one_model(
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for train_index, test_index in splitter.split(features, labels):
+            for train_index, test_index in splitter.split(features, labels, groups):
                 pipeline = _fold_pipeline(
                     features=features,
                     estimator=_estimator(name, task, seed, balance=balance),
@@ -546,7 +689,7 @@ def _benchmark_checks(
                 kind="below-baseline",
                 severity=Severity.HIGH,
                 columns=(),
-                summary="the dummy baseline scores highest of everything tried",
+                summary="the dummy baseline leads everything tried",
                 metrics={"leader": "dummy"},
             )
         )

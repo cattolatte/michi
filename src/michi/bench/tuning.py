@@ -251,6 +251,8 @@ def tune_model(
     seed: int = 0,
     policy: Any = None,
     recipe: Any = None,
+    groups: Any = None,
+    metric: str | None = None,
 ) -> TuneResult:
     """Search hyperparameters, and score the winner on untouched folds.
 
@@ -274,18 +276,18 @@ def tune_model(
 
     entry = model_entry(model)
     resolved_policy = policy if policy is not None else PreparationPolicy()
-    scorers = _scorers(task)
+    scorers = _scorers(task, metric)
     metric_name, scorer, greater_is_better = scorers[0]
 
     started = time.perf_counter()
     label_array = np.asarray(labels)
-    splitter, folds = _make_splitter(task, folds, label_array, seed)
+    splitter, folds = _make_splitter(task, folds, label_array, seed, groups)
     outer: list[float] = []
     baseline: list[float] = []
     inner: list[float] = []
     winners: list[dict[str, Any]] = []
     evaluated = 0
-    for train_index, test_index in splitter.split(features, label_array):
+    for train_index, test_index in splitter.split(features, label_array, groups):
         train_x = features.iloc[train_index]
         train_y = label_array[train_index]
         test_x = features.iloc[test_index]
@@ -307,10 +309,18 @@ def tune_model(
             seed=seed,
             task=task,
             labels=train_y,
+            groups=None if groups is None else groups[train_index],
             metric=metric_name,
             greater_is_better=greater_is_better,
         )
-        search.fit(train_x, train_y)
+        # sklearn's search objects take a group-aware splitter *and* the
+        # groups themselves; passing only the splitter leaves it calling
+        # split() with groups=None, which raises rather than silently
+        # ungrouping — but the message names sklearn internals, not the flag.
+        if groups is None:
+            search.fit(train_x, train_y)
+        else:
+            search.fit(train_x, train_y, groups=groups[train_index])
         evaluated = max(evaluated, _evaluated(search))
         inner.append(float(search.best_score_))
         winners.append(dict(search.best_params_))
@@ -355,6 +365,7 @@ def _build_search(
     seed: int,
     task: str,
     labels: Any,
+    groups: Any = None,
     metric: str,
     greater_is_better: bool,
 ) -> Any:
@@ -364,7 +375,7 @@ def _build_search(
     from michi.bench.runner import _make_splitter
 
     scoring = _sklearn_scoring(metric, greater_is_better)
-    inner_cv, _ = _make_splitter(task, folds, labels, seed)
+    inner_cv, _ = _make_splitter(task, folds, labels, seed, groups)
 
     if strategy == "grid":
         return GridSearchCV(pipeline, space, cv=inner_cv, scoring=scoring, n_jobs=1)

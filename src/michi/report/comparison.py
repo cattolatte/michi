@@ -16,7 +16,7 @@ Design Principles
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from michi.core.manifest import Metric, RunManifest
 from michi.report.runs import RunGroup
@@ -173,13 +173,13 @@ def _verdict_sentence(result: BenchResult) -> str:
     tied = _tied(result)
     if not tied:
         return (
-            f"`{leader.name}` scores highest, and its advantage over every "
+            f"`{leader.name}` {_leads(result)}, and its advantage over every "
             f"other model is statistically significant."
         )
     names = ", ".join(f"`{name}`" for name in tied)
     verb = "is" if len(tied) == 1 else "are"
     return (
-        f"`{leader.name}` scores highest, but {names} {verb} statistically "
+        f"`{leader.name}` {_leads(result)}, but {names} {verb} statistically "
         f"indistinguishable from it at this sample size. Choosing between "
         f"them on these numbers alone is not supported."
     )
@@ -328,3 +328,16 @@ def _manifest_verdict(manifest: RunManifest) -> str:
     if comparison.get("significant"):
         return f"worse (p={float(comparison.get('adjusted_p', 1.0)):.3g})"
     return f"tied with leader (p={float(comparison.get('adjusted_p', 1.0)):.3g})"
+
+
+def _leads(result: Any) -> str:
+    """How the leader leads, in the direction the metric actually improves.
+
+    "Scores highest" is false on RMSE, RMSLE, MAE, and every other metric that
+    improves downward — the leader scores *lowest*. Saying it anyway is the
+    same inversion the teaching notes carried until v1.2.
+    """
+    leader = result.leader
+    if leader is None or not leader.metrics:
+        return "leads"
+    return "scores highest" if leader.primary.greater_is_better else "scores lowest"

@@ -55,6 +55,7 @@ def run_ensemble(
     policy: PreparationPolicy | None = None,
     recipe: Recipe | None = None,
     seed: int = 0,
+    group: str | None = None,
     group_id: str | None = None,
 ) -> BenchResult:
     """Cross-validate an ensemble alongside the models it combines.
@@ -124,6 +125,7 @@ def run_ensemble(
             policy=policy,
             recipe=recipe,
             seed=seed,
+            group=group,
             group_id=group_id,
         )
 

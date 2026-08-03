@@ -6,6 +6,62 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-07-27
+
+The whole toolbox is now under the guarantee, not the third of it that existed
+in July.
+
+### Fixed
+- **Cross-validation ignored groups.** `michi split --group` has kept an
+  entity on one side of a split since v1.9, while `bench`, `tune`, and
+  `ensemble` cross-validated without honouring groups at all — michi
+  contradicting its own advice on exactly the pattern the advice exists for.
+
+  On a dataset whose label is a property of the customer, that overstated
+  balanced accuracy by **26 points**: 0.836 against an honest 0.580. All three
+  verbs now take `--group`, using `StratifiedGroupKFold` or `GroupKFold`, and
+  the grouping column is never passed to the model as a feature.
+
+  This was fixed *before* the freeze rather than after, because freezing a
+  defect makes it a feature.
+- **`tune --metric` and `tune --group` were declared and never wired.** Both
+  silently did nothing. Found by an audit that walks every command's signature
+  and checks each parameter is referenced in its own body — now the eighth and
+  ninth bugs this project has surfaced by looking rather than by testing.
+- **The verdict said "scores highest" about metrics that improve downward.**
+  On RMSE, RMSLE, and MAE the leader scores *lowest*, and saying otherwise was
+  the same inversion the teaching notes carried until v1.2.
+- `tune` passed a group-aware splitter to scikit-learn's search without the
+  groups themselves, which raised from library internals rather than naming
+  the flag.
+
+### Added
+- **`--metric`** on `bench` and `tune`. The named metric becomes the head of
+  the scorer list, so the ranking, the intervals, and the significance tests
+  are all computed against the thing you actually care about. A competition
+  scores on its own metric, and optimising anything else is climbing the wrong
+  hill.
+- **`rmsle` and `mape`** built in, and a **`michi.metrics` entry point** for
+  everything else. RMSLE clamps negatives rather than failing a run; MAPE
+  skips rows whose truth is zero rather than returning infinity.
+- **[docs/api.md](docs/api.md)** — the Python API has been frozen since 1.0
+  and never documented as something to use. A guarantee nobody knows about
+  buys nothing, and a notebook is the natural home for half of michi's
+  audience.
+- Documentation for `diff`, `threshold`, `errors`, `split`, and `ensemble`,
+  which had shipped with release notes and nothing else.
+
+### Changed
+- **[ADR-0005](docs/adr/0005-freeze-the-expanded-surface.md)** extends the
+  ADR-0002 freeze to all 17 verbs, all 17 recipe operations, the extended run
+  manifest, the `michi.metrics` plugin group, and the documented Python API.
+
+  Nothing breaks — every 1.x command runs unchanged. The major version marks a
+  change to the *contract*: michi now commits to keeping stable a surface
+  roughly twice the size of the one it committed to at 1.0. Leaving eight
+  verbs permanently outside the freeze was rejected because a guarantee you
+  have to check per-verb is not a guarantee.
+
 ## [1.11.0] — 2026-07-27
 
 Text, time, and three things a practitioner had to leave michi to do.

@@ -88,6 +88,21 @@ def bench_command(
     open_report: Annotated[
         bool, typer.Option("--open", help="Open the HTML report in a browser.")
     ] = False,
+    metric: Annotated[
+        str | None,
+        typer.Option(
+            "--metric",
+            help="Rank and test by this metric instead of michi's default.",
+        ),
+    ] = None,
+    group: Annotated[
+        str | None,
+        typer.Option(
+            "--group",
+            help="Keep rows sharing this column in one fold. Use it whenever "
+            "rows share an entity.",
+        ),
+    ] = None,
     balance: Annotated[
         bool,
         typer.Option(
@@ -162,6 +177,8 @@ def bench_command(
             seed=seed,
             balance=balance,
             oof=oof,
+            group=group,
+            metric=metric,
         )
     except MichiError as err:
         fail(str(err))

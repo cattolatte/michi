@@ -15,7 +15,7 @@ Design Principles
 from __future__ import annotations
 
 import datetime as _dt
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich import box
 from rich.console import Console, Group, RenderableType
@@ -705,13 +705,13 @@ def _verdict(result: BenchResult) -> RenderableType:
     text.append("Verdict  ", style="bold")
     if not tied:
         text.append(
-            f"{leader.name} scores highest, and the difference from every "
+            f"{leader.name} {_leads(result)}, and the difference from every "
             f"other model is statistically significant."
         )
     else:
         names = ", ".join(comparison.model for comparison in tied)
         text.append(
-            f"{leader.name} scores highest, but {names} "
+            f"{leader.name} {_leads(result)}, but {names} "
             f"{'is' if len(tied) == 1 else 'are'} statistically "
             f"indistinguishable from it at this sample size. "
         )
@@ -810,3 +810,16 @@ def _run_verdict(manifest: RunManifest) -> Text:
     if comparison.get("significant"):
         return Text(f"worse (p={adjusted:.3g})", style="dim")
     return Text(f"tied with leader (p={adjusted:.3g})", style="yellow")
+
+
+def _leads(result: Any) -> str:
+    """How the leader leads, in the direction the metric actually improves.
+
+    "Scores highest" is false on RMSE, RMSLE, MAE, and every other metric that
+    improves downward — the leader scores *lowest*. Saying it anyway is the
+    same inversion the teaching notes carried until v1.2.
+    """
+    leader = result.leader
+    if leader is None or not leader.metrics:
+        return "leads"
+    return "scores highest" if leader.primary.greater_is_better else "scores lowest"
