@@ -38,9 +38,9 @@ __all__ = [
 def render_benchmark_html(result: BenchResult) -> str:
     """Render a benchmark as a single self-contained HTML document."""
     from michi.bench import describe_policy
-    from michi.report.html import _environment
+    from michi.report.html import template_environment
 
-    template = _environment().get_template("benchmark.html.jinja")
+    template = template_environment().get_template("benchmark.html.jinja")
     return template.render(
         result=result,
         rows=_rows(result),
@@ -95,7 +95,8 @@ def render_benchmark_latex(result: BenchResult) -> str:
         f"({result.folds}-fold, {result.n_rows:,} rows, seed {result.seed}). "
         "Intervals are 95\\% across folds; differences from the leading model "
         "are tested with the corrected resampled $t$-test "
-        "\\citep{nadeau2003inference} and Holm-adjusted.}",
+        "\\citep{nadeau2003inference} and Holm-adjusted. "
+        f"{_latex_sentence(_verdict_sentence(result))}}}",
         "\\label{tab:michi-benchmark}",
         "\\begin{tabular}{lrrl}",
         "\\toprule",
@@ -182,6 +183,21 @@ def _verdict_sentence(result: BenchResult) -> str:
         f"`{leader.name}` {_leads(result)}, but {names} {verb} statistically "
         f"indistinguishable from it at this sample size. Choosing between "
         f"them on these numbers alone is not supported."
+    )
+
+
+def _latex_sentence(text: str) -> str:
+    """Render a verdict sentence for a caption, converting code spans.
+
+    A floating table travels without the prose around it: whoever reads it in
+    a paper sees the caption and nothing else. The conclusion therefore has to
+    be *in* the caption, which is why this exists rather than the sentence
+    being dropped as it was.
+    """
+    parts = text.split("`")
+    return "".join(
+        f"\\texttt{{{_escape_latex(part)}}}" if index % 2 else _escape_latex(part)
+        for index, part in enumerate(parts)
     )
 
 
@@ -281,9 +297,9 @@ def render_runs_latex(groups: tuple[RunGroup, ...]) -> str:
 
 def render_runs_html(groups: tuple[RunGroup, ...]) -> str:
     """Render recorded runs as a single self-contained HTML document."""
-    from michi.report.html import _environment
+    from michi.report.html import template_environment
 
-    template = _environment().get_template("runs.html.jinja")
+    template = template_environment().get_template("runs.html.jinja")
     return template.render(
         groups=[
             {

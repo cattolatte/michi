@@ -85,6 +85,9 @@ def threshold_command(
     recipe: Annotated[
         Path | None, typer.Option("--recipe", help="Cleaning recipe to apply first.")
     ] = None,
+    seed: Annotated[
+        int | None, typer.Option("--seed", help="Seed for sampling a large file.")
+    ] = None,
     sample: Annotated[
         int, typer.Option("--sample", help="Rows to keep when a large file is sampled.")
     ] = DEFAULT_SAMPLE_ROWS,
@@ -101,6 +104,7 @@ def threshold_command(
     """
     console = Console()
     defaults = resolve_defaults()
+    resolved_seed = defaults.number("seed", seed) or 0
 
     try:
         if objective not in OBJECTIVES:
@@ -122,6 +126,7 @@ def threshold_command(
             costs=costs,
             sample=sample,
             full=full,
+            seed=resolved_seed,
         )
     except MichiError as err:
         fail(str(err))
@@ -159,6 +164,7 @@ def _measure(
     costs: tuple[float, float],
     sample: int,
     full: bool,
+    seed: int,
 ) -> tuple[list[_Row], Any, float]:
     """Score every cutoff against the labels."""
     import numpy as np
@@ -171,7 +177,7 @@ def _measure(
         )
         raise DataError(msg)
 
-    table = load_table(data, sample_rows=sample, full=full, seed=0)
+    table = load_table(data, sample_rows=sample, full=full, seed=seed)
     frame = table.frame
     if recipe is not None:
         from michi.recipes import apply_deterministic, load_recipe
@@ -320,17 +326,23 @@ def _render(
         f"{best.false_positives:,} false alarms."
     )
     console.print(Padding(note, (0, 0, 1, 2)))
-    console.print(
-        Padding(
-            Text(
-                "Which trade to take is yours: it depends what a miss costs "
-                "and what a false\nalarm costs, and michi has no way to know "
-                "either. Pass --cost to weigh them.",
-                style="dim",
-            ),
-            (0, 0, 1, 2),
+    # Two different sentences, because a user who has already stated the
+    # weights does not need to be told to state them.
+    if costs == (1.0, 1.0):
+        closing = (
+            "Which trade to take is yours: it depends what a miss costs "
+            "and what a false\nalarm costs, and michi has no way to know "
+            "either. Pass --cost to weigh them."
         )
-    )
+    else:
+        miss, alarm = costs
+        closing = (
+            f"This cutoff is the best one under the weights you gave — a miss "
+            f"at {miss:g}, a false\nalarm at {alarm:g}. Change the weights and "
+            f"the best cutoff moves; michi has no\nopinion on what they should "
+            f"be."
+        )
+    console.print(Padding(Text(closing, style="dim"), (0, 0, 1, 2)))
 
 
 def _best(rows: list[_Row], objective: str) -> _Row:

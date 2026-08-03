@@ -16,7 +16,14 @@ from __future__ import annotations
 
 from michi.bench.preprocess import PreparationPolicy, describe_policy
 from michi.bench.registry import ModelEntry, available_models, model_entry
-from michi.bench.runner import BenchResult, ModelResult, run_benchmark
+from michi.bench.runner import (
+    BenchResult,
+    ModelResult,
+    fold_pipeline,
+    make_splitter,
+    run_benchmark,
+    scorers_for,
+)
 from michi.bench.significance import Comparison, corrected_paired_t_test
 
 __all__ = [
@@ -28,6 +35,9 @@ __all__ = [
     "available_models",
     "corrected_paired_t_test",
     "describe_policy",
+    "fold_pipeline",
+    "make_splitter",
     "model_entry",
     "run_benchmark",
+    "scorers_for",
 ]

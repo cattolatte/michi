@@ -37,6 +37,7 @@ __all__ = [
     "Question",
     "command_for",
     "feature_opportunities",
+    "ordered_steps",
     "questions_for",
     "recipe_from_answers",
     "recipe_from_flags",
@@ -114,7 +115,7 @@ def recipe_from_answers(
         if choice.step is not None:
             steps.append(choice.step)
     return Recipe(
-        steps=_ordered(steps),
+        steps=ordered_steps(steps),
         target=target or profile.target,
         source=_schema_of(profile),
     )
@@ -277,7 +278,7 @@ def recipe_from_flags(
         )
 
     return Recipe(
-        steps=_ordered(steps),
+        steps=ordered_steps(steps),
         target=target or (profile.target if profile else None),
         source=_schema_of(profile) if profile else SourceSchema(),
     )
@@ -774,7 +775,7 @@ _STEP_ORDER = {
 }
 
 
-def _ordered(steps: list[RecipeStep]) -> tuple[RecipeStep, ...]:
+def ordered_steps(steps: list[RecipeStep]) -> tuple[RecipeStep, ...]:
     """Put steps in the only order that makes sense.
 
     Dropping first avoids work on columns that are about to disappear; casting

@@ -286,3 +286,80 @@ def test_manifests_round_trip_through_the_report(
     for path in runs.glob("*.json"):
         manifest = RunManifest.from_dict(json.loads(path.read_text(encoding="utf-8")))
         assert manifest.kind == "bench"
+
+
+# --- the report a benchmark writes -----------------------------------------
+
+
+def test_report_suffix_picks_the_format(tidy_csv: Path, tmp_path: Path) -> None:
+    """One flag, three formats, chosen by the path the user already typed."""
+    expected = {
+        "out.html": "<",
+        "out.md": "# Benchmark",
+        "out.tex": "\\begin{tabular}",
+    }
+    for name, marker in expected.items():
+        destination = tmp_path / name
+        result = runner.invoke(
+            app,
+            [
+                "bench",
+                str(tidy_csv),
+                "--target",
+                "label",
+                "--models",
+                "linear",
+                "--no-save",
+                "--report",
+                str(destination),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert marker in destination.read_text(encoding="utf-8")
+
+
+def test_an_unreadable_suffix_fails_before_anything_trains(
+    tidy_csv: Path, tmp_path: Path
+) -> None:
+    """Learning this after a long benchmark, with nothing written, is unusable."""
+    destination = tmp_path / "out.xyz"
+    result = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "linear",
+            "--no-save",
+            "--report",
+            str(destination),
+        ],
+    )
+    assert result.exit_code != 0
+    assert ".tex" in result.output  # the message names what would have worked
+    assert not destination.exists()
+    assert "leader" not in result.output  # no benchmark was run
+
+
+def test_open_on_a_non_html_report_says_so(tidy_csv: Path, tmp_path: Path) -> None:
+    """Silently ignoring a flag leaves the user waiting for a browser."""
+    destination = tmp_path / "out.tex"
+    result = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "linear",
+            "--no-save",
+            "--report",
+            str(destination),
+            "--open",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "nothing was opened" in result.output

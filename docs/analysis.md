@@ -73,6 +73,16 @@ mistake, because the useful next step happens somewhere that is not a
 terminal. A regression target has no "wrong", only "far", so rows are ranked
 by residual instead.
 
+## A loaded model runs code
+
+`predict`, `threshold`, and `errors` all load a model you name, and loading a
+pickle **executes whatever is inside it**. That is not a michi weakness — it
+is how `pickle` and `joblib` work, and why `module:object` exists as the
+alternative — but it means the same caution applies as to running any script:
+evaluate models you trust, or ones you produced yourself with `michi fit`.
+
+michi never downloads a model, and never loads one you did not name.
+
 ## `michi split` — holding data out honestly
 
 ```bash

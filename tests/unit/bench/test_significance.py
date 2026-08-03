@@ -179,9 +179,9 @@ def test_a_recipe_claimed_column_is_still_scaled() -> None:
     import numpy as np
     import pandas as pd
 
+    from michi.bench import fold_pipeline
     from michi.bench.preprocess import PreparationPolicy
     from michi.bench.registry import build_model
-    from michi.bench.runner import _fold_pipeline
     from michi.recipes import Recipe, RecipeStep
 
     rng = np.random.default_rng(0)
@@ -197,7 +197,7 @@ def test_a_recipe_claimed_column_is_still_scaled() -> None:
         steps=(RecipeStep("impute", {"columns": ["salary"], "strategy": "median"}),)
     )
 
-    pipeline = _fold_pipeline(
+    pipeline = fold_pipeline(
         features=frame,
         estimator=build_model("linear", "classification", 0),
         policy=PreparationPolicy(),
@@ -214,16 +214,16 @@ def test_a_model_that_does_not_need_scaling_is_left_alone() -> None:
     import numpy as np
     import pandas as pd
 
+    from michi.bench import fold_pipeline
     from michi.bench.preprocess import PreparationPolicy
     from michi.bench.registry import build_model
-    from michi.bench.runner import _fold_pipeline
     from michi.recipes import Recipe, RecipeStep
 
     frame = pd.DataFrame({"salary": [50_000.0, 60_000.0, 70_000.0, 55_000.0]})
     recipe = Recipe(
         steps=(RecipeStep("impute", {"columns": ["salary"], "strategy": "median"}),)
     )
-    pipeline = _fold_pipeline(
+    pipeline = fold_pipeline(
         features=frame,
         estimator=build_model("tree", "classification", 0),
         policy=PreparationPolicy(),
@@ -253,9 +253,9 @@ def test_a_neural_network_beats_chance_on_learnable_data() -> None:
     import pandas as pd
     from sklearn.model_selection import cross_val_score
 
+    from michi.bench import fold_pipeline
     from michi.bench.preprocess import PreparationPolicy
     from michi.bench.registry import build_model
-    from michi.bench.runner import _fold_pipeline
 
     rng = np.random.default_rng(0)
     rows = 300
@@ -263,7 +263,7 @@ def test_a_neural_network_beats_chance_on_learnable_data() -> None:
     frame = pd.DataFrame({"signal": signal, "noise": rng.normal(size=rows)})
     labels = (signal + rng.normal(scale=0.3, size=rows) > 0).astype(int)
 
-    pipeline = _fold_pipeline(
+    pipeline = fold_pipeline(
         features=frame,
         estimator=build_model("mlp", "classification", 0),
         policy=PreparationPolicy(),

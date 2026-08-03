@@ -12,7 +12,6 @@ Design Principles
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Annotated
 
@@ -23,7 +22,7 @@ from michi.cli.context import resolve_defaults
 from michi.cli.errors import fail
 from michi.core.errors import DataError, MichiError
 from michi.core.io import DEFAULT_SAMPLE_ROWS, LoadedTable, load_table
-from michi.core.manifest import RunManifest
+from michi.core.manifest import RunManifest, write_manifest
 from michi.evaluation import evaluate_model
 from michi.evaluation.metrics import BOOTSTRAP_SAMPLES
 from michi.report import render_evaluation
@@ -186,10 +185,10 @@ def eval_command(
     written: list[Path] = []
     if not no_save:
         destination = runs_dir / f"{manifest.run_id}.json"
-        _write_manifest(manifest, destination)
+        write_manifest(manifest, destination)
         written.append(destination)
     if json_out is not None:
-        _write_manifest(manifest, json_out)
+        write_manifest(manifest, json_out)
         written.append(json_out)
     for destination in written:
         console.print(f"  [dim]wrote[/] {destination}")
@@ -225,15 +224,6 @@ def _split(value: str | None) -> tuple[str, ...] | None:
         return None
     names = tuple(item.strip() for item in value.split(",") if item.strip())
     return names or None
-
-
-def _write_manifest(manifest: RunManifest, destination: Path) -> None:
-    """Write a run manifest as formatted, UTF-8 JSON."""
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(manifest.to_dict(), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _gate(manifest: RunManifest, expression: str, console: Console) -> int:

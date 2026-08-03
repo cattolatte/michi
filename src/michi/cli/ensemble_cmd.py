@@ -136,7 +136,7 @@ def ensemble_command(
     render_benchmark(result, console, explain=explain)
 
     if save:
-        from michi.cli.bench_cmd import _write_manifest
+        from michi.core.manifest import write_manifest as _write_manifest
 
         destination = defaults.path("runs_dir", runs_dir) or Path("runs")
         for manifest in result.manifests:

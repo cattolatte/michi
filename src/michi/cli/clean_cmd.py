@@ -431,10 +431,10 @@ def _add_features(profile, recipe, console: Console, *, target: str | None):  # 
             f"      [dim]added: {opportunity.op} on {len(chosen)} column(s)[/]"
         )
 
-    from michi.recipes.author import _ordered
+    from michi.recipes import ordered_steps
 
     return Recipe(
-        steps=_ordered(steps),
+        steps=ordered_steps(steps),
         target=recipe.target or target,
         source=recipe.source,
     )

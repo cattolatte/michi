@@ -25,6 +25,7 @@ import platform
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Self
 
 from michi import __version__
@@ -37,6 +38,7 @@ __all__ = [
     "ModelSpec",
     "RunManifest",
     "capture_environment",
+    "write_manifest",
 ]
 
 MANIFEST_SCHEMA_VERSION = "1.0"
@@ -362,3 +364,20 @@ class RunManifest:
             michi_version=str(payload.get("michi_version", __version__)),
             created_at=str(payload.get("created_at", utc_now_iso())),
         )
+
+
+def write_manifest(manifest: RunManifest, destination: Path) -> None:
+    """Write a run manifest as formatted, UTF-8 JSON.
+
+    Public because four commands write manifests and three of them were
+    reaching into a fourth command's private helper to do it — a CLI module
+    importing another CLI module's internals, which is the coupling the
+    one-way dependency rule exists to prevent.
+    """
+    import json
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(manifest.to_dict(), indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )

@@ -190,8 +190,20 @@ silently is an AutoML system wearing a different hat.
 ## Output
 
 Every model gets its own run manifest in `runs/`, sharing a `group_id` so
-`michi report` can regroup them. `--report bench.html` writes a self-contained
-offline page.
+`michi report` can regroup them. `--report` writes the comparison to a file,
+**in whatever format the suffix asks for**:
+
+```bash
+michi bench data.csv --target y --report bench.html   # self-contained page
+michi bench data.csv --target y --report bench.md     # README or pull request
+michi bench data.csv --target y --report table.tex    # booktabs, for a paper
+```
+
+The LaTeX table is a complete `table` environment with the verdict *inside the
+caption* — a float travels without the prose around it, and a table showing
+0.91 against 0.87 with no note reads as a clear win when the difference is not
+one. The suffix is checked before any model trains, so an unreadable one costs
+you a moment rather than a benchmark.
 
 ## Options
 
@@ -207,8 +219,8 @@ offline page.
 | `--no-scale` | off | Never standardise |
 | `--runs-dir` | `runs` | Where manifests are written |
 | `--no-save` | off | Do not write manifests |
-| `--report` | none | Write an HTML report |
-| `--open` | off | Open the report in a browser |
+| `--report` | none | Write a report; `.html`, `.md`, or `.tex` |
+| `--open` | off | Open the report in a browser (HTML only) |
 | `--recipe` | none | Cleaning recipe to apply |
 | `--seed` | 0 | Seed for folds and models |
 | `--group` | none | Keep rows sharing this column in one fold |

@@ -12,7 +12,6 @@ Design Principles
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -20,10 +19,10 @@ import typer
 from rich.console import Console
 
 from michi.cli.context import resolve_defaults
-from michi.cli.errors import fail
+from michi.cli.errors import fail, warn
 from michi.core.errors import MichiError
 from michi.core.io import DEFAULT_SAMPLE_ROWS, load_table
-from michi.core.manifest import RunManifest
+from michi.core.manifest import write_manifest
 
 __all__ = ["bench_command"]
 
@@ -83,10 +82,14 @@ def bench_command(
     ] = False,
     report_to: Annotated[
         Path | None,
-        typer.Option("--report", help="Write an HTML report of the comparison here."),
+        typer.Option(
+            "--report",
+            help="Write a report of the comparison here. The format follows "
+            "the suffix: .html, .md, or .tex.",
+        ),
     ] = None,
     open_report: Annotated[
-        bool, typer.Option("--open", help="Open the HTML report in a browser.")
+        bool, typer.Option("--open", help="Open the written HTML report.")
     ] = False,
     metric: Annotated[
         str | None,
@@ -143,6 +146,11 @@ def bench_command(
         _print_model_menu(console, task)
         raise typer.Exit()
 
+    # Checked before any model trains. Learning that a suffix is unreadable
+    # after a twenty-minute benchmark, with nothing written, is the kind of
+    # error that has to happen at the start or not at all.
+    report_format = _report_format(report_to)
+
     defaults = resolve_defaults()
     seed = defaults.number("seed", seed) or 0
     folds = defaults.number("cv", folds) or 5
@@ -193,14 +201,12 @@ def bench_command(
     if not no_save:
         for manifest in result.manifests:
             destination = runs_dir / f"{manifest.run_id}.json"
-            _write_manifest(manifest, destination)
+            write_manifest(manifest, destination)
         if result.manifests:
             written.append(runs_dir)
     if report_to is not None:
-        from michi.report import render_benchmark_html
-
         report_to.parent.mkdir(parents=True, exist_ok=True)
-        report_to.write_text(render_benchmark_html(result), encoding="utf-8")
+        report_to.write_text(_render(result, report_format), encoding="utf-8")
         written.append(report_to)
 
     for destination in written:
@@ -214,9 +220,16 @@ def bench_command(
         console.print()
 
     if open_report and report_to is not None:
-        import webbrowser
+        if report_to.suffix.lower() not in {".html", ".htm"}:
+            warn(
+                console,
+                f"--open does nothing for a {report_to.suffix} file; "
+                "nothing was opened.",
+            )
+        else:
+            import webbrowser
 
-        webbrowser.open(report_to.resolve().as_uri())
+            webbrowser.open(report_to.resolve().as_uri())
 
 
 def _print_model_menu(console: Console, task: str | None) -> None:
@@ -253,15 +266,6 @@ def _print_model_menu(console: Console, task: str | None) -> None:
     console.print()
 
 
-def _write_manifest(manifest: RunManifest, destination: Path) -> None:
-    """Write a run manifest as formatted, UTF-8 JSON."""
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(manifest.to_dict(), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-
-
 def _write_oof(
     result: Any, table: Any, target: str, destination: Path, console: Console
 ) -> None:
@@ -290,3 +294,51 @@ def _write_oof(
         f"  [dim]wrote out-of-fold predictions for {len(columns)} model(s) "
         f"to {destination}[/]"
     )
+
+
+_REPORT_FORMATS = {
+    ".html": "html",
+    ".htm": "html",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".tex": "latex",
+    ".latex": "latex",
+}
+
+
+def _report_format(destination: Path | None) -> str:
+    """Name the renderer a path asks for, or explain why it names none.
+
+    A benchmark is the thing people paste into a README or a paper, and until
+    this existed the Markdown and LaTeX renderers were reachable only by
+    importing michi in Python. Dispatching on the suffix keeps the choice a
+    property of the path the user already typed, rather than a second flag
+    that has to agree with it.
+    """
+    if destination is None:
+        return "html"
+    name = _REPORT_FORMATS.get(destination.suffix.lower())
+    if name is None:
+        known = ", ".join(sorted(_REPORT_FORMATS))
+        msg = (
+            f"cannot tell what format {destination.name!r} should be; "
+            f"use one of these suffixes: {known}"
+        )
+        raise typer.BadParameter(msg)
+    return name
+
+
+def _render(result: Any, output_format: str) -> str:
+    """Render a finished benchmark in the format its path asked for."""
+    from michi.report import (
+        render_benchmark_html,
+        render_benchmark_latex,
+        render_benchmark_markdown,
+    )
+
+    renderers = {
+        "html": render_benchmark_html,
+        "markdown": render_benchmark_markdown,
+        "latex": render_benchmark_latex,
+    }
+    return renderers[output_format](result)

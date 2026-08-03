@@ -65,13 +65,13 @@ def inventory() -> tuple[str, ...]:
     from michi.cli.app import app
     from michi.console.commands import COMMANDS
     from michi.explain.registry import explanations
-    from michi.recipes.model import _KNOWN_OPS
+    from michi.recipes.model import known_operations
 
     verbs = sum(1 for command in app.registered_commands if command.name)
     return (
         f"michi v{__version__}  ·  a local-first ML workbench",
         f"{verbs} verbs  ·  {len(available_models())} models  ·  "
-        f"{len(_KNOWN_OPS)} recipe ops  ·  {len(explanations())} explanations",
+        f"{len(known_operations())} recipe ops  ·  {len(explanations())} explanations",
         f"{len(COMMANDS)} console commands  ·  "
         "no account, no telemetry, no network call",
     )

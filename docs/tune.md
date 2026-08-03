@@ -164,6 +164,16 @@ Needs **no label column** — that is the whole point, and the one thing `eval`
 cannot do. `--recipe` applies the same cleaning the model was trained under.
 `--drop-target` removes a label column that a held-out file still carries.
 
+## A loaded model runs code
+
+`predict`, `threshold`, and `errors` all load a model you name, and loading a
+pickle **executes whatever is inside it**. That is not a michi weakness — it
+is how `pickle` and `joblib` work, and why `module:object` exists as the
+alternative — but it means the same caution applies as to running any script:
+evaluate models you trust, or ones you produced yourself with `michi fit`.
+
+michi never downloads a model, and never loads one you did not name.
+
 ### Any model, including deep learning
 
 `predict` accepts anything `eval` does:

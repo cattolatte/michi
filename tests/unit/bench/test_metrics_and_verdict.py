@@ -13,8 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from michi.bench import run_benchmark
-from michi.bench.runner import _scorers
+from michi.bench import run_benchmark, scorers_for
 from michi.core.errors import RunError
 from michi.core.io import load_table
 
@@ -46,21 +45,21 @@ def test_a_named_metric_becomes_the_headline(regression: Path) -> None:
 
 def test_competition_metrics_are_built_in(regression: Path) -> None:
     """RMSLE and MAPE are common enough to ship rather than require a plugin."""
-    names = [name for name, _, _ in _scorers("regression")]
+    names = [name for name, _, _ in scorers_for("regression")]
     assert "rmsle" in names
     assert "mape" in names
 
 
 def test_rmsle_survives_a_negative_prediction() -> None:
     """A model undershooting to -0.001 must not fail the whole run."""
-    scorers = {name: fn for name, fn, _ in _scorers("regression")}
+    scorers = {name: fn for name, fn, _ in scorers_for("regression")}
     value = scorers["rmsle"](np.array([1.0, 2.0]), np.array([-0.001, 2.0]))
     assert value == value  # not NaN
 
 
 def test_mape_ignores_rows_whose_truth_is_zero() -> None:
     """Dividing by a true zero is undefined, not infinite."""
-    scorers = {name: fn for name, fn, _ in _scorers("regression")}
+    scorers = {name: fn for name, fn, _ in scorers_for("regression")}
     value = scorers["mape"](np.array([0.0, 4.0]), np.array([1.0, 2.0]))
     assert value == pytest.approx(0.5)
 
@@ -68,7 +67,7 @@ def test_mape_ignores_rows_whose_truth_is_zero() -> None:
 def test_an_unknown_metric_names_what_exists_and_how_to_add_one() -> None:
     """An error says what to do, not only what went wrong."""
     with pytest.raises(RunError, match=r"michi\.metrics"):
-        _scorers("regression", "map_at_k")
+        scorers_for("regression", "map_at_k")
 
 
 def test_metric_direction_is_carried_not_guessed(regression: Path) -> None:

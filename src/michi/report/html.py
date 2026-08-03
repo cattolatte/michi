@@ -24,14 +24,17 @@ from michi.explain import explanation_for
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from jinja2 import Environment
 
-__all__ = ["render_profile_html"]
+__all__ = [
+    "render_profile_html",
+    "template_environment",
+]
 
 _SPARK_WIDTH = 104
 _SPARK_HEIGHT = 26
 
 
 @lru_cache(maxsize=1)
-def _environment() -> Environment:
+def template_environment() -> Environment:
     """Build the Jinja environment, autoescaping HTML by default."""
     from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -68,7 +71,7 @@ def render_profile_html(profile: DatasetProfile) -> str:
         if explanation is not None
     ]
 
-    template = _environment().get_template("profile.html.jinja")
+    template = template_environment().get_template("profile.html.jinja")
     return template.render(
         profile=profile,
         findings=findings,

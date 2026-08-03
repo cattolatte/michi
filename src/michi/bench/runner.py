@@ -38,7 +38,14 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     import numpy as np
     import pandas as pd
 
-__all__ = ["BenchResult", "ModelResult", "run_benchmark"]
+__all__ = [
+    "BenchResult",
+    "ModelResult",
+    "fold_pipeline",
+    "make_splitter",
+    "run_benchmark",
+    "scorers_for",
+]
 
 _MIN_ROWS_PER_FOLD = 5
 
@@ -219,8 +226,8 @@ def run_benchmark(
             msg = f"{name!r} does not support {resolved_task}; it supports: {supported}"
             raise RunError(msg)
 
-    splitter, folds = _make_splitter(resolved_task, folds, labels, seed, group_values)
-    scorers = _scorers(resolved_task, metric)
+    splitter, folds = make_splitter(resolved_task, folds, labels, seed, group_values)
+    scorers = scorers_for(resolved_task, metric)
     primary_metric = scorers[0][0]
 
     results: list[ModelResult] = []
@@ -305,7 +312,7 @@ def _with_baseline(models: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(names)
 
 
-def _make_splitter(
+def make_splitter(
     task: str,
     folds: int,
     labels: np.ndarray[Any, Any],
@@ -386,7 +393,9 @@ def _custom_scorer(name: str) -> tuple[str, Any, bool] | None:
     return None
 
 
-def _scorers(task: str, metric: str | None = None) -> tuple[tuple[str, Any, bool], ...]:
+def scorers_for(
+    task: str, metric: str | None = None
+) -> tuple[tuple[str, Any, bool], ...]:
     """Metric functions for a task, headline metric first.
 
     A named `metric` is promoted to the front, so every ranking, interval, and
@@ -510,7 +519,7 @@ def _run_one_model(
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for train_index, test_index in splitter.split(features, labels, groups):
-                pipeline = _fold_pipeline(
+                pipeline = fold_pipeline(
                     features=features,
                     estimator=_estimator(name, task, seed, balance=balance),
                     policy=policy,
@@ -574,7 +583,7 @@ def _estimator(name: str, task: str, seed: int, *, balance: bool) -> Any:
     return estimator
 
 
-def _fold_pipeline(
+def fold_pipeline(
     *,
     features: pd.DataFrame,
     estimator: Any,

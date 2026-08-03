@@ -60,6 +60,9 @@ def diff_command(
         str | None,
         typer.Option("--fail-on", help="Exit non-zero at this severity: high|warn."),
     ] = None,
+    seed: Annotated[
+        int | None, typer.Option("--seed", help="Seed for sampling a large file.")
+    ] = None,
     sample: Annotated[
         int, typer.Option("--sample", help="Rows to keep when a large file is sampled.")
     ] = DEFAULT_SAMPLE_ROWS,
@@ -74,11 +77,18 @@ def diff_command(
     Either side may be a committed profile.json or a raw data file.
     """
     console = Console()
+    from michi.cli.context import resolve_defaults
+
+    resolved_seed = resolve_defaults().number("seed", seed) or 0
     try:
         from michi.inspection.drift import compare_profiles
 
-        before = _as_profile(baseline, target=target, sample=sample, full=full)
-        after = _as_profile(current, target=target, sample=sample, full=full)
+        before = _as_profile(
+            baseline, target=target, sample=sample, full=full, seed=resolved_seed
+        )
+        after = _as_profile(
+            current, target=target, sample=sample, full=full, seed=resolved_seed
+        )
         report = compare_profiles(before, after)
     except MichiError as err:
         fail(str(err))
@@ -99,7 +109,7 @@ def diff_command(
 
 
 def _as_profile(
-    path: Path, *, target: str | None, sample: int, full: bool
+    path: Path, *, target: str | None, sample: int, full: bool, seed: int
 ) -> DatasetProfile:
     """Read a side of the comparison, profiling it first if it is raw data."""
     if not path.exists():
@@ -122,7 +132,7 @@ def _as_profile(
 
     from michi.inspection import profile_table
 
-    table = load_table(path, sample_rows=sample, full=full, seed=0)
+    table = load_table(path, sample_rows=sample, full=full, seed=seed)
     resolved = target if target and target in table.frame.columns else None
     return profile_table(table, target=resolved)
 

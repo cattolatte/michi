@@ -65,6 +65,9 @@ def errors_command(
     recipe: Annotated[
         Path | None, typer.Option("--recipe", help="Cleaning recipe to apply first.")
     ] = None,
+    seed: Annotated[
+        int | None, typer.Option("--seed", help="Seed for sampling a large file.")
+    ] = None,
     sample: Annotated[
         int, typer.Option("--sample", help="Rows to keep when a large file is sampled.")
     ] = DEFAULT_SAMPLE_ROWS,
@@ -80,6 +83,7 @@ def errors_command(
     """
     console = Console()
     defaults = resolve_defaults()
+    resolved_seed = defaults.number("seed", seed) or 0
 
     try:
         frame, wrong, confidence = _find(
@@ -89,6 +93,7 @@ def errors_command(
             recipe=defaults.path("recipe", recipe),
             sample=sample,
             full=full,
+            seed=resolved_seed,
         )
     except MichiError as err:
         fail(str(err))
@@ -113,6 +118,7 @@ def _find(
     recipe: Path | None,
     sample: int,
     full: bool,
+    seed: int,
 ) -> tuple[Any, Any, bool]:
     """Predict, keep the rows that were wrong, and rank them by confidence."""
     import numpy as np
@@ -123,7 +129,7 @@ def _find(
         msg = "error analysis needs a target: pass --target, or set it in michi.toml"
         raise DataError(msg)
 
-    table = load_table(data, sample_rows=sample, full=full, seed=0)
+    table = load_table(data, sample_rows=sample, full=full, seed=seed)
     frame = table.frame
     if recipe is not None:
         from michi.recipes import apply_deterministic, load_recipe

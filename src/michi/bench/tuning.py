@@ -267,7 +267,7 @@ def tune_model(
 
     from michi.bench.preprocess import PreparationPolicy
     from michi.bench.registry import build_model, model_entry
-    from michi.bench.runner import _fold_pipeline, _make_splitter, _scorers
+    from michi.bench.runner import fold_pipeline, make_splitter, scorers_for
 
     if strategy not in STRATEGIES:
         known = ", ".join(STRATEGIES)
@@ -276,12 +276,12 @@ def tune_model(
 
     entry = model_entry(model)
     resolved_policy = policy if policy is not None else PreparationPolicy()
-    scorers = _scorers(task, metric)
+    scorers = scorers_for(task, metric)
     metric_name, scorer, greater_is_better = scorers[0]
 
     started = time.perf_counter()
     label_array = np.asarray(labels)
-    splitter, folds = _make_splitter(task, folds, label_array, seed, groups)
+    splitter, folds = make_splitter(task, folds, label_array, seed, groups)
     outer: list[float] = []
     baseline: list[float] = []
     inner: list[float] = []
@@ -293,7 +293,7 @@ def tune_model(
         test_x = features.iloc[test_index]
         test_y = label_array[test_index]
 
-        pipeline = _fold_pipeline(
+        pipeline = fold_pipeline(
             features=train_x,
             estimator=build_model(model, task, seed),
             policy=resolved_policy,
@@ -328,7 +328,7 @@ def tune_model(
 
         # The same model at its defaults, on the same fold — otherwise
         # "tuning gained 0.02" has nothing to be 0.02 against.
-        plain = _fold_pipeline(
+        plain = fold_pipeline(
             features=train_x,
             estimator=build_model(model, task, seed),
             policy=resolved_policy,
@@ -372,10 +372,10 @@ def _build_search(
     """Construct the sklearn search object for one strategy."""
     from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
-    from michi.bench.runner import _make_splitter
+    from michi.bench.runner import make_splitter
 
     scoring = _sklearn_scoring(metric, greater_is_better)
-    inner_cv, _ = _make_splitter(task, folds, labels, seed, groups)
+    inner_cv, _ = make_splitter(task, folds, labels, seed, groups)
 
     if strategy == "grid":
         return GridSearchCV(pipeline, space, cv=inner_cv, scoring=scoring, n_jobs=1)

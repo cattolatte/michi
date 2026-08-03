@@ -25,7 +25,13 @@ from michi import __version__
 from michi.core.artifacts import utc_now_iso
 from michi.core.errors import RecipeError
 
-__all__ = ["RECIPE_SCHEMA_VERSION", "Recipe", "RecipeStep", "SourceSchema"]
+__all__ = [
+    "RECIPE_SCHEMA_VERSION",
+    "Recipe",
+    "RecipeStep",
+    "SourceSchema",
+    "known_operations",
+]
 
 RECIPE_SCHEMA_VERSION = "1.0"
 """Schema version of the recipe artifact. Frozen under semver at michi 1.0."""
@@ -273,3 +279,19 @@ class Recipe:
             michi_version=str(payload.get("michi_version", __version__)),
             created_at=str(payload.get("created_at", utc_now_iso())),
         )
+
+
+def known_operations() -> tuple[str, ...]:
+    """Every recipe operation this michi understands, alphabetically.
+
+    Public because the console banner counts them and a plugin author needs
+    to know what already exists. Reading ``_KNOWN_OPS`` across a package
+    boundary made a private mapping load-bearing, which ADR-0005 froze without
+    meaning to.
+
+    Examples
+    --------
+    >>> "drop" in known_operations()
+    True
+    """
+    return tuple(sorted(_KNOWN_OPS))

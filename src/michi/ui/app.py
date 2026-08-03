@@ -54,7 +54,7 @@ def build_app(runs_dir: Path) -> Any:
         )
         raise ReportError(msg) from err
 
-    from michi.report.html import _environment
+    from michi.report.html import template_environment
 
     app = FastAPI(
         title="michi",
@@ -62,7 +62,7 @@ def build_app(runs_dir: Path) -> Any:
         redoc_url=None,
         openapi_url=None,
     )
-    environment = _environment()
+    environment = template_environment()
 
     def _groups() -> tuple[Any, ...]:
         from michi.report.runs import group_runs, load_manifests

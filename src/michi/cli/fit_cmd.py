@@ -193,6 +193,9 @@ def predict_command(
         str | None,
         typer.Option("--drop-target", help="Label column to remove if present."),
     ] = None,
+    seed: Annotated[
+        int | None, typer.Option("--seed", help="Seed for sampling a large file.")
+    ] = None,
     sample: Annotated[
         int, typer.Option("--sample", help="Rows to keep when a large file is sampled.")
     ] = DEFAULT_SAMPLE_ROWS,
@@ -207,6 +210,7 @@ def predict_command(
     """
     console = Console()
     defaults = resolve_defaults()
+    resolved_seed = defaults.number("seed", seed) or 0
 
     try:
         import pandas as pd
@@ -214,7 +218,9 @@ def predict_command(
         from michi.adapters import load_model
 
         resolved_data = defaults.required_data(data)
-        table = load_table(resolved_data, sample_rows=sample, full=full, seed=0)
+        table = load_table(
+            resolved_data, sample_rows=sample, full=full, seed=resolved_seed
+        )
         frame = table.frame.copy()
 
         identifiers = None
@@ -322,9 +328,9 @@ def _build_fitted(
     if params is not None:
         estimator.set_params(**_load_params(params))
 
-    from michi.bench.runner import _fold_pipeline
+    from michi.bench.runner import fold_pipeline
 
-    pipeline = _fold_pipeline(
+    pipeline = fold_pipeline(
         features=features,
         estimator=estimator,
         policy=PreparationPolicy(),
