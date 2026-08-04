@@ -77,6 +77,14 @@ def bench_command(
         Path | None,
         typer.Option("--runs-dir", help="Directory to write manifests into."),
     ] = None,
+    params: Annotated[
+        Path | None,
+        typer.Option(
+            "--params",
+            help="YAML of hyperparameters keyed by model name, e.g. "
+            "`hist-gbm: {learning_rate: 0.05}`.",
+        ),
+    ] = None,
     no_save: Annotated[
         bool, typer.Option("--no-save", help="Do not write run manifests.")
     ] = False,
@@ -150,6 +158,7 @@ def bench_command(
     # after a twenty-minute benchmark, with nothing written, is the kind of
     # error that has to happen at the start or not at all.
     report_format = _report_format(report_to)
+    model_params = _model_params(params)
 
     defaults = resolve_defaults()
     seed = defaults.number("seed", seed) or 0
@@ -187,6 +196,7 @@ def bench_command(
             oof=oof,
             group=group,
             metric=metric,
+            params=model_params,
         )
     except MichiError as err:
         fail(str(err))
@@ -342,3 +352,44 @@ def _render(result: Any, output_format: str) -> str:
         "latex": render_benchmark_latex,
     }
     return renderers[output_format](result)
+
+
+def _model_params(path: Path | None) -> dict[str, dict[str, Any]]:
+    """Read per-model hyperparameters, keyed by catalogue name.
+
+    A benchmark trains several models, so one flat block of parameters cannot
+    say which model it belongs to. Keying by name also makes the mixed case
+    expressible — a tuned model against untuned ones — which is the comparison
+    people actually want to run after `tune`.
+    """
+    if path is None:
+        return {}
+
+    import yaml
+
+    if not path.exists():
+        msg = f"no such parameter file: {path}"
+        raise typer.BadParameter(msg)
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        msg = f"{path.name} should map model names to their parameters"
+        raise typer.BadParameter(msg)
+
+    flat = [key for key, value in payload.items() if not isinstance(value, dict)]
+    if flat:
+        # Almost always a file from `tune --save-params`, which writes one
+        # model's parameters with no name attached because `fit` trains one
+        # model. Saying so beats "expected a mapping".
+        example = ", ".join(sorted(str(key) for key in flat)[:3])
+        msg = (
+            f"{path.name} looks like one model's parameters ({example}...), "
+            f"but bench trains several and needs to know which model they are "
+            f"for. Nest them under the model name:\n\n"
+            f"  hist-gbm:\n    {flat[0]}: {payload[flat[0]]!r}\n"
+        )
+        raise typer.BadParameter(msg)
+
+    return {
+        str(name): {str(key): value for key, value in block.items()}
+        for name, block in payload.items()
+    }

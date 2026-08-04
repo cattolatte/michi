@@ -187,6 +187,37 @@ michi picks no members, prunes none for scoring poorly, and weights none by
 validation score. Those are modelling judgements, and a tool that makes them
 silently is an AutoML system wearing a different hat.
 
+## Benchmarking at parameters you chose
+
+Every catalogue model carries defaults, and every one of them is overridable.
+`--params` takes a YAML file keyed by model name, so a benchmark can mix a
+tuned model with untuned ones — which is the comparison worth running after
+`michi tune`, and the only one that comes with intervals and a significance
+test:
+
+```yaml
+# params.yaml
+hist-gbm:
+  learning_rate: 0.05
+  max_iter: 400
+linear:
+  C: 0.5
+```
+
+```bash
+michi bench data.csv --target y --models hist-gbm,linear,rf --params params.yaml
+```
+
+A model absent from the file trains at its defaults. Both the model names and
+the parameter names are checked **before the first fold runs**: a name michi
+does not recognise is refused rather than ignored, because a benchmark that
+silently discards your settings prints a leaderboard you would have no reason
+to distrust.
+
+`michi tune --save-params best.yaml` writes one model's parameters flat, since
+`fit` trains one model. To use them here, nest them under that model's name —
+the error message shows you the exact shape if you forget.
+
 ## Output
 
 Every model gets its own run manifest in `runs/`, sharing a `group_id` so
@@ -219,6 +250,7 @@ you a moment rather than a benchmark.
 | `--no-scale` | off | Never standardise |
 | `--runs-dir` | `runs` | Where manifests are written |
 | `--no-save` | off | Do not write manifests |
+| `--params` | none | Per-model hyperparameters, keyed by model name |
 | `--report` | none | Write a report; `.html`, `.md`, or `.tex` |
 | `--open` | off | Open the report in a browser (HTML only) |
 | `--recipe` | none | Cleaning recipe to apply |

@@ -363,3 +363,162 @@ def test_open_on_a_non_html_report_says_so(tidy_csv: Path, tmp_path: Path) -> No
     )
     assert result.exit_code == 0, result.output
     assert "nothing was opened" in result.output
+
+
+# --- benchmarking a model at parameters you chose --------------------------
+
+
+def test_params_reach_the_model_being_benchmarked(
+    tidy_csv: Path, tmp_path: Path
+) -> None:
+    """Comparing tuned against untuned was impossible until `--params` existed.
+
+    `fit --params` could train one model your way, but a benchmark is the only
+    thing that reports intervals and a significance test — so the comparison
+    people want after `tune` had nowhere to happen.
+    """
+    crippled = tmp_path / "p.yaml"
+    crippled.write_text("hist-gbm:\n  max_iter: 1\n", encoding="utf-8")
+
+    with_params = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "hist-gbm",
+            "--no-save",
+            "--params",
+            str(crippled),
+        ],
+    )
+    without = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "hist-gbm",
+            "--no-save",
+        ],
+    )
+    assert with_params.exit_code == 0, with_params.output
+    assert without.exit_code == 0, without.output
+    assert with_params.output != without.output
+
+
+def test_a_model_absent_from_the_params_file_keeps_its_defaults(
+    tidy_csv: Path, tmp_path: Path
+) -> None:
+    """Mixed benchmarks are the point — one tuned model against the field."""
+    only_one = tmp_path / "p.yaml"
+    only_one.write_text("hist-gbm:\n  max_iter: 20\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "hist-gbm,linear",
+            "--no-save",
+            "--params",
+            str(only_one),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "linear" in result.output
+
+
+def test_a_flat_params_file_is_told_how_to_nest_itself(
+    tidy_csv: Path, tmp_path: Path
+) -> None:
+    """`tune --save-params` writes flat, because `fit` trains one model.
+
+    Feeding that straight to bench is the obvious next thing to try, so the
+    error has to teach the nesting rather than report a type mismatch.
+    """
+    flat = tmp_path / "p.yaml"
+    flat.write_text("max_iter: 20\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "hist-gbm",
+            "--no-save",
+            "--params",
+            str(flat),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "hist-gbm:" in result.output  # it shows the corrected shape
+
+
+def test_an_unknown_parameter_fails_before_anything_trains(
+    tidy_csv: Path, tmp_path: Path
+) -> None:
+    """A stack trace is not an error message, and neither is a wasted run."""
+    typo = tmp_path / "p.yaml"
+    typo.write_text("hist-gbm:\n  max_iterr: 20\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "hist-gbm,linear",
+            "--no-save",
+            "--params",
+            str(typo),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Traceback" not in result.output
+    assert "max_iterr" in result.output
+    assert "max_iter" in result.output  # and what would have worked
+    assert "leader" not in result.output  # nothing was benchmarked
+
+
+def test_params_for_a_model_not_being_benchmarked_are_refused(
+    tidy_csv: Path, tmp_path: Path
+) -> None:
+    """Silently ignoring them is the worst outcome available.
+
+    A mistyped model name used to be a no-op: the benchmark ran at defaults
+    and printed a leaderboard the user believed reflected their settings.
+    Nothing in the output could have told them otherwise.
+    """
+    wrong = tmp_path / "p.yaml"
+    wrong.write_text("histgbm:\n  max_iter: 20\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "bench",
+            str(tidy_csv),
+            "--target",
+            "label",
+            "--models",
+            "hist-gbm",
+            "--no-save",
+            "--params",
+            str(wrong),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "histgbm" in result.output
+    assert "hist-gbm" in result.output  # the name it should have been

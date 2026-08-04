@@ -326,7 +326,9 @@ def _build_fitted(
 
     estimator = build_model(model, resolved_task, seed)
     if params is not None:
-        estimator.set_params(**_load_params(params))
+        from michi.bench import apply_params
+
+        apply_params(estimator, _load_params(params))
 
     from michi.bench.runner import fold_pipeline
 

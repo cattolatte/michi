@@ -15,7 +15,12 @@ Design Principles
 from __future__ import annotations
 
 from michi.bench.preprocess import PreparationPolicy, describe_policy
-from michi.bench.registry import ModelEntry, available_models, model_entry
+from michi.bench.registry import (
+    ModelEntry,
+    apply_params,
+    available_models,
+    model_entry,
+)
 from michi.bench.runner import (
     BenchResult,
     ModelResult,
@@ -32,6 +37,7 @@ __all__ = [
     "ModelEntry",
     "ModelResult",
     "PreparationPolicy",
+    "apply_params",
     "available_models",
     "corrected_paired_t_test",
     "describe_policy",

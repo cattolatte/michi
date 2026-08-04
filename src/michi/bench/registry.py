@@ -16,7 +16,7 @@ Design Principles
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Final
@@ -25,6 +25,7 @@ from michi.core.errors import RunError, install_hint
 
 __all__ = [
     "ModelEntry",
+    "apply_params",
     "available_models",
     "build_model",
     "model_entry",
@@ -494,3 +495,62 @@ def build_model(name: str, task: str, seed: int) -> Any:
         msg = f"{name!r} does not support {task}; it supports: {supported}"
         raise RunError(msg)
     return entry.factory(task, seed)
+
+
+def apply_params(estimator: Any, params: Mapping[str, Any]) -> Any:
+    """Set hyperparameters on an estimator, or explain why they did not fit.
+
+    Every model michi trains carries defaults, and every one of those defaults
+    is meant to be overridable — that is the difference between a default and
+    a decision made for you. This is the single place that override happens,
+    so a mistyped name fails the same readable way wherever it was passed.
+
+    Parameters
+    ----------
+    estimator
+        Any object following the scikit-learn ``get_params``/``set_params``
+        protocol.
+    params
+        Parameter names mapped to values. An empty mapping is a no-op.
+
+    Returns
+    -------
+    Any
+        The same estimator, mutated in place and returned for chaining.
+
+    Raises
+    ------
+    RunError
+        If a name is not a parameter of this estimator, or a value is not one
+        it accepts. The message names the offender and lists what would have
+        worked, because the alternative is a scikit-learn traceback.
+
+    Examples
+    --------
+    >>> from sklearn.linear_model import Ridge
+    >>> apply_params(Ridge(), {"alpha": 2.0}).alpha
+    2.0
+    """
+    if not params:
+        return estimator
+
+    known = sorted(getattr(estimator, "get_params", dict)())
+    unknown = [name for name in params if name not in known]
+    if unknown:
+        offenders = ", ".join(repr(name) for name in sorted(unknown))
+        available = ", ".join(known) or "none"
+        plural = "s" if len(unknown) > 1 else ""
+        msg = (
+            f"{type(estimator).__name__} has no parameter{plural} "
+            f"{offenders}. It accepts: {available}"
+        )
+        raise RunError(msg)
+
+    try:
+        estimator.set_params(**dict(params))
+    except (TypeError, ValueError) as err:
+        # The name was right, so the value was wrong. scikit-learn states the
+        # accepted range better than a re-description of it would.
+        msg = f"{type(estimator).__name__} rejected a parameter value: {err}"
+        raise RunError(msg) from err
+    return estimator

@@ -20,12 +20,13 @@ from __future__ import annotations
 
 import time
 import warnings
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from michi.bench.preprocess import PreparationPolicy, build_pipeline, describe_policy
-from michi.bench.registry import build_model, model_entry
+from michi.bench.registry import apply_params, build_model, model_entry
 from michi.bench.significance import Comparison, compare_to_leader
 from michi.core.artifacts import Finding, Severity
 from michi.core.errors import DataError, RunError
@@ -122,6 +123,7 @@ def run_benchmark(
     group: str | None = None,
     metric: str | None = None,
     group_id: str | None = None,
+    params: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> BenchResult:
     """Train and compare models under cross-validation.
 
@@ -159,6 +161,11 @@ def run_benchmark(
     group
         Column whose rows must stay in one fold. Required whenever rows share
         an entity: without it, cross-validation reports memory as skill.
+    params
+        Per-model hyperparameter overrides, keyed by catalogue name. A model
+        absent from the mapping trains at its defaults, so comparing a tuned
+        model against untuned ones is a thing you can state rather than a
+        thing that happens by accident.
     group_id
         Identifier shared by all manifests from this benchmark.
 
@@ -226,6 +233,24 @@ def run_benchmark(
             msg = f"{name!r} does not support {resolved_task}; it supports: {supported}"
             raise RunError(msg)
 
+    # Parameters are checked against real estimators before the first fold,
+    # for two reasons. A name nobody recognises is a silent no-op — the user
+    # reads a leaderboard believing it reflects settings that never applied —
+    # and a typo caught after a long benchmark has already wasted the run.
+    if params:
+        unknown_models = [name for name in params if name not in requested]
+        if unknown_models:
+            offenders = ", ".join(repr(name) for name in sorted(unknown_models))
+            benchmarked = ", ".join(requested)
+            msg = (
+                f"parameters were given for {offenders}, which "
+                f"{'is' if len(unknown_models) == 1 else 'are'} not being "
+                f"benchmarked. This benchmark trains: {benchmarked}"
+            )
+            raise RunError(msg)
+        for name, block in params.items():
+            apply_params(build_model(name, resolved_task, seed), block)
+
     splitter, folds = make_splitter(resolved_task, folds, labels, seed, group_values)
     scorers = scorers_for(resolved_task, metric)
     primary_metric = scorers[0][0]
@@ -246,6 +271,7 @@ def run_benchmark(
                 groups=group_values,
                 balance=balance,
                 collect_oof=oof is not None,
+                params=(params or {}).get(name),
             )
         )
 
@@ -506,6 +532,7 @@ def _run_one_model(
     groups: np.ndarray[Any, Any] | None = None,
     balance: bool = False,
     collect_oof: bool = False,
+    params: Mapping[str, Any] | None = None,
 ) -> ModelResult:
     """Cross-validate one model, capturing failure rather than aborting."""
     import numpy as np
@@ -521,7 +548,9 @@ def _run_one_model(
             for train_index, test_index in splitter.split(features, labels, groups):
                 pipeline = fold_pipeline(
                     features=features,
-                    estimator=_estimator(name, task, seed, balance=balance),
+                    estimator=_estimator(
+                        name, task, seed, balance=balance, params=params
+                    ),
                     policy=policy,
                     recipe=recipe,
                     needs_scaling=entry.needs_scaling,
@@ -568,7 +597,14 @@ def _run_one_model(
     )
 
 
-def _estimator(name: str, task: str, seed: int, *, balance: bool) -> Any:
+def _estimator(
+    name: str,
+    task: str,
+    seed: int,
+    *,
+    balance: bool,
+    params: Mapping[str, Any] | None = None,
+) -> Any:
     """Build a model, weighting classes by inverse frequency when asked.
 
     Not every estimator accepts `class_weight`, and one that does not is not
@@ -576,6 +612,8 @@ def _estimator(name: str, task: str, seed: int, *, balance: bool) -> Any:
     be noise on a leaderboard where other models did honour it.
     """
     estimator = build_model(name, task, seed)
+    if params:
+        apply_params(estimator, params)
     if not balance or task != "classification":
         return estimator
     if "class_weight" in getattr(estimator, "get_params", dict)():
