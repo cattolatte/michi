@@ -6,13 +6,64 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-08-04
+
+Everything a production review found, and the one capability its absence made
+obvious.
+
 ### Added
+- **`bench --params`** — per-model hyperparameters, keyed by catalogue name,
+  so a benchmark can mix a tuned model with untuned ones. `fit --params` could
+  train one model your way, but a benchmark is the only thing michi has that
+  reports intervals and a corrected significance test, which left the
+  comparison people actually want after `tune` with nowhere to happen. A model
+  absent from the file trains at its defaults.
+- **`--seed` on `diff`, `errors`, `threshold`, and `predict`.** All four
+  sampled large files at a hardcoded seed, ignoring both the flag and
+  `michi.toml`, so two people running the same command on the same file could
+  not compare notes and neither could reproduce the other's run.
+- **`bench --report` chooses its format from the file suffix** — `.html`,
+  `.md`, or `.tex`. `render_benchmark_markdown` and `render_benchmark_latex`
+  shipped in `michi.report.__all__`, documented and tested, and were reachable
+  only by importing michi in Python. The suffix is validated before the first
+  model trains.
+- **Public API for what was already load-bearing**: `fold_pipeline`,
+  `make_splitter`, `scorers_for`, `ordered_steps`, `template_environment`,
+  `apply_params`, `known_operations()`, and `core.manifest.write_manifest()`.
+  Ten cross-package imports reached into private names, which made ADR-0005's
+  claim that everything outside `__all__` is private simply false.
 - The dead-flag audit that found four bugs is now a test. It walks every
   command's signature and asserts each parameter is referenced in its own
   body, alongside checks that every verb is documented and every recipe
   operation is reachable from a flag. A flag that accepts a value and does
   nothing is invisible to a normal suite, because there is nothing to assert
   against a feature that was never connected.
+- Coverage tooling, reported and never gated, plus a CI job that installs
+  PyTorch — without it the `torch-mlp` training loop executed nowhere in CI
+  and its tests skipped in silence, which looks identical to passing.
+
+### Fixed
+- **A mistyped model name in a params file was silently ignored.** The
+  benchmark ran at defaults and printed a leaderboard the user had every
+  reason to believe reflected their settings, with nothing in the output to
+  suggest otherwise. Both model names and parameter names are now checked
+  before the first fold runs.
+- **A mistyped parameter name produced a raw Python traceback**, against the
+  rule that third-party failures wrap in `MichiError` with an actionable
+  message. `apply_params()` is now the single place an override is applied.
+- **The LaTeX export dropped the verdict sentence.** A float travels without
+  the prose around it, so a table showing 0.91 against 0.87 read as a clear
+  win when the difference was statistically indistinguishable. The conclusion
+  now sits in the caption.
+- **`threshold` closed by telling you to pass `--cost` when you just had.**
+- **`--open` on a non-HTML report silently did nothing.**
+- The pickle-executes-code caveat lived only in `docs/eval.md` while three
+  newer verbs grew the same capability without it.
+
+### Notes
+- `recipes/pipeline.py`, which decides what may see the whole dataset, was at
+  48% coverage; `report/comparison.py`, which renders what people paste into
+  papers, was at 52%. Both are now above 94%.
 
 ## [2.0.0] — 2026-07-27
 

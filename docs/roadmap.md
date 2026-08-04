@@ -33,6 +33,7 @@ edges, in plugins, rather than in the core.
 | **v1.9** | `split` + importance | Grouped and time-based splits; permutation importance through the predict protocol. **Shipped.** |
 | **v1.10** | `diff` · `threshold` · `errors` | Drift against a baseline; the decision cutoff; the rows behind the score. **Shipped.** |
 | **v1.11** | text · time · oof · calibration | TF-IDF and lengths, lag and rolling windows, out-of-fold predictions, class weights, probability calibration. **Shipped.** |
+| **v2.1** | chosen parameters | `bench --params` for per-model hyperparameters, seeded sampling everywhere, Markdown and LaTeX benchmark exports. **Shipped.** |
 | **v2.0** | re-freeze | Group-aware cross-validation, user-chosen metrics, a documented Python API — and ADR-0005 bringing the whole expanded surface under semver. **Shipped.** |
 
 ## Known gaps
